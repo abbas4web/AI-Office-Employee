@@ -16,6 +16,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/users', userRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // --- Error Handler (must be last) ---
 app.use(errorHandler);
