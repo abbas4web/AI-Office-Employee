@@ -99,3 +99,36 @@ src/
 | DB_NAME      | Database name             | mydb        |
 | DB_USER      | Database user             | postgres    |
 | DB_PASSWORD  | Database password         | -           |
+
+## Deployment
+
+### Deploy to Vercel
+
+1. **Install Vercel CLI**
+
+   ```bash
+   npm i -g vercel
+   ```
+
+2. **Login to Vercel**
+
+   ```bash
+   vercel login
+   ```
+
+3. **Deploy**
+
+   ```bash
+   vercel
+   ```
+
+4. **Add Environment Variables in Vercel Dashboard**
+   - Go to your project settings
+   - Add `DATABASE_URL` with your Neon PostgreSQL connection string
+   - Add `NODE_ENV=production`
+
+### Important Notes
+
+- **Database**: Ensure your Neon PostgreSQL allows connections from Vercel's IP ranges (or use `sslmode=require`)
+- **Serverless**: The app runs as serverless functions on Vercel
+- **CORS**: Already enabled for all origins in `app.js`
