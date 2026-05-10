@@ -1,14 +1,14 @@
-import { Outlet, Link, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { Outlet, Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 export default function Layout() {
-  const navigate = useNavigate()
-  const [isLoggedIn, setIsLoggedIn] = useState(true)
+  const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
 
   const handleLogout = () => {
-    setIsLoggedIn(false)
-    navigate('/login')
-  }
+    setIsLoggedIn(false);
+    navigate("/login");
+  };
 
   return (
     <div className="layout">
@@ -20,12 +20,15 @@ export default function Layout() {
           <Link to="/dashboard">Dashboard</Link>
           <Link to="/tasks">Tasks</Link>
           <Link to="/clients">Clients</Link>
-          <button onClick={handleLogout} className="logout-btn">Logout</button>
+          <Link to="/reminders">Reminders</Link>
+          <button onClick={handleLogout} className="logout-btn">
+            Logout
+          </button>
         </div>
       </nav>
       <main className="main-content">
         <Outlet />
       </main>
     </div>
-  )
+  );
 }

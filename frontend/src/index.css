@@ -412,6 +412,67 @@ body {
   font-size: 0.9rem;
 }
 
+/* Reminders */
+.reminders-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.reminder-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #3498db;
+}
+
+.reminder-card.unread {
+  border-left-color: #e74c3c;
+  background-color: #fff5f5;
+}
+
+.reminder-card.read {
+  border-left-color: #95a5a6;
+  opacity: 0.8;
+}
+
+.reminder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.reminder-header h3 {
+  color: #2c3e50;
+}
+
+.badge {
+  background-color: #e74c3c;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.reminder-message {
+  color: #555;
+  margin-bottom: 0.5rem;
+}
+
+.reminder-task {
+  color: #3498db;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.reminder-meta {
+  color: #95a5a6;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
 /* Modal */
 .modal {
   position: fixed;

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [clients, setClients] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -11,11 +13,43 @@ export default function Tasks() {
     priority: "medium",
     status: "pending",
     due_date: "",
+    assigned_to: "",
+    client_id: "",
   });
 
   useEffect(() => {
     fetchTasks();
+    fetchUsers();
+    fetchClients();
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch(
+        "https://ai-office-employee-api.vercel.app/api/users"
+      );
+      const data = await res.json();
+      if (data.success) {
+        setUsers(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    }
+  };
+
+  const fetchClients = async () => {
+    try {
+      const res = await fetch(
+        "https://ai-office-employee-api.vercel.app/api/clients"
+      );
+      const data = await res.json();
+      if (data.success) {
+        setClients(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch clients:", error);
+    }
+  };
 
   const fetchTasks = async () => {
     try {
@@ -38,11 +72,18 @@ export default function Tasks() {
       ? `https://ai-office-employee-api.vercel.app/api/tasks/${editingTask.id}`
       : "https://ai-office-employee-api.vercel.app/api/tasks";
 
+    // Convert empty strings to null for UUID fields
+    const dataToSend = {
+      ...formData,
+      assigned_to: formData.assigned_to || null,
+      client_id: formData.client_id || null,
+    };
+
     try {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dataToSend),
       });
       if (res.ok) {
         fetchTasks();
@@ -54,6 +95,8 @@ export default function Tasks() {
           priority: "medium",
           status: "pending",
           due_date: "",
+          assigned_to: "",
+          client_id: "",
         });
       }
     } catch (error) {
@@ -274,6 +317,38 @@ export default function Tasks() {
                   }
                 />
               </div>
+              <div className="form-group">
+                <label>Assigned To</label>
+                <select
+                  value={formData.assigned_to}
+                  onChange={(e) =>
+                    setFormData({ ...formData, assigned_to: e.target.value })
+                  }
+                >
+                  <option value="">-- Unassigned --</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Client</label>
+                <select
+                  value={formData.client_id}
+                  onChange={(e) =>
+                    setFormData({ ...formData, client_id: e.target.value })
+                  }
+                >
+                  <option value="">-- No Client (Internal) --</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="modal-actions">
                 <button type="submit" className="btn btn-primary">
                   Save
@@ -290,6 +365,8 @@ export default function Tasks() {
                       priority: "medium",
                       status: "pending",
                       due_date: "",
+                      assigned_to: "",
+                      client_id: "",
                     });
                   }}
                 >
