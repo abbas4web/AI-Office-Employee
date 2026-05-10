@@ -54,4 +54,45 @@ const createUser = async (req, res, next) => {
   }
 };
 
-module.exports = { getUsers, getUser, createUser };
+/**
+ * PATCH /api/users/:id
+ * Updates an existing user. Expects { name, email, role } (all optional).
+ */
+const updateUser = async (req, res, next) => {
+  try {
+    const existingUser = await userService.getUserById(req.params.id);
+    if (!existingUser) {
+      const error = new Error('User not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    const { name, email, role } = req.body;
+    const user = await userService.updateUser(req.params.id, { name, email, role });
+    res.json({ success: true, data: user });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * DELETE /api/users/:id
+ * Deletes a user by ID.
+ */
+const deleteUser = async (req, res, next) => {
+  try {
+    const existingUser = await userService.getUserById(req.params.id);
+    if (!existingUser) {
+      const error = new Error('User not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    await userService.deleteUser(req.params.id);
+    res.json({ success: true, message: 'User deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getUsers, getUser, createUser, updateUser, deleteUser };

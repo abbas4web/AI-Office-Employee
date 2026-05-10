@@ -1,4 +1,5 @@
 const clientService = require('../services/clientService');
+const { logActivity } = require('../services/activityService');
 
 /**
  * GET /clients
@@ -49,12 +50,11 @@ const createClient = async (req, res, next) => {
     }
 
     const client = await clientService.createClient({
-      name,
-      email,
-      phone,
-      company,
-      notes
+      name, email, phone, company, notes
     });
+
+    // Log activity
+    await logActivity(req.user?.id, 'CREATE', 'client', client.id, { name: client.name });
 
     res.status(201).json({ success: true, data: client });
   } catch (err) {
@@ -78,12 +78,11 @@ const updateClient = async (req, res, next) => {
     }
 
     const client = await clientService.updateClient(req.params.id, {
-      name,
-      email,
-      phone,
-      company,
-      notes
+      name, email, phone, company, notes
     });
+
+    // Log activity
+    await logActivity(req.user?.id, 'UPDATE', 'client', client.id, { name: client.name });
 
     res.json({ success: true, data: client });
   } catch (err) {
@@ -105,6 +104,10 @@ const deleteClient = async (req, res, next) => {
     }
 
     await clientService.deleteClient(req.params.id);
+
+    // Log activity
+    await logActivity(req.user?.id, 'DELETE', 'client', req.params.id, { name: existingClient.name });
+
     res.json({ success: true, message: 'Client deleted successfully' });
   } catch (err) {
     next(err);

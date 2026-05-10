@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { API_URL, authHeader } from "../api";
 
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -7,7 +8,12 @@ export default function Tasks() {
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [priorityFilter, setPriorityFilter] = useState("all");
-  const [formData, setFormData] = useState({
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
+
+  const emptyForm = {
     title: "",
     description: "",
     priority: "medium",
@@ -15,7 +21,8 @@ export default function Tasks() {
     due_date: "",
     assigned_to: "",
     client_id: "",
-  });
+  };
+  const [formData, setFormData] = useState(emptyForm);
 
   useEffect(() => {
     fetchTasks();
@@ -25,124 +32,129 @@ export default function Tasks() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch(
-        "https://ai-office-employee-api.vercel.app/api/users"
-      );
+      const res = await fetch(`${API_URL}/api/users`, { headers: authHeader() });
       const data = await res.json();
-      if (data.success) {
-        setUsers(data.data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
+      if (data.success) setUsers(data.data);
+    } catch {
+      console.error("Failed to fetch users");
     }
   };
 
   const fetchClients = async () => {
     try {
-      const res = await fetch(
-        "https://ai-office-employee-api.vercel.app/api/clients"
-      );
+      const res = await fetch(`${API_URL}/api/clients`, { headers: authHeader() });
       const data = await res.json();
-      if (data.success) {
-        setClients(data.data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch clients:", error);
+      if (data.success) setClients(data.data);
+    } catch {
+      console.error("Failed to fetch clients");
     }
   };
 
   const fetchTasks = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const res = await fetch(
-        "https://ai-office-employee-api.vercel.app/api/tasks"
-      );
+      const res = await fetch(`${API_URL}/api/tasks`, { headers: authHeader() });
       const data = await res.json();
       if (data.success) {
         setTasks(data.data);
+      } else {
+        setError('Failed to load tasks.');
       }
-    } catch (error) {
-      console.error("Failed to fetch tasks:", error);
+    } catch {
+      setError('Cannot reach server. Please check your connection.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError('');
+    setSaving(true);
+
     const method = editingTask ? "PATCH" : "POST";
     const url = editingTask
-      ? `https://ai-office-employee-api.vercel.app/api/tasks/${editingTask.id}`
-      : "https://ai-office-employee-api.vercel.app/api/tasks";
+      ? `${API_URL}/api/tasks/${editingTask.id}`
+      : `${API_URL}/api/tasks`;
 
-    // Convert empty strings to null for UUID fields
     const dataToSend = {
       ...formData,
       assigned_to: formData.assigned_to || null,
       client_id: formData.client_id || null,
+      due_date: formData.due_date || null,
     };
 
     try {
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader() },
         body: JSON.stringify(dataToSend),
       });
+      const data = await res.json();
       if (res.ok) {
         fetchTasks();
-        setShowModal(false);
-        setEditingTask(null);
-        setFormData({
-          title: "",
-          description: "",
-          priority: "medium",
-          status: "pending",
-          due_date: "",
-          assigned_to: "",
-          client_id: "",
-        });
+        closeModal();
+      } else {
+        setFormError(data.message || 'Failed to save task.');
       }
-    } catch (error) {
-      console.error("Failed to save task:", error);
+    } catch {
+      setFormError('Cannot reach server. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
+  // Fix 3: populate all fields including assigned_to and client_id
   const handleEdit = (task) => {
     setEditingTask(task);
     setFormData({
-      title: task.title,
-      description: task.description,
-      priority: task.priority,
-      status: task.status,
+      title: task.title || "",
+      description: task.description || "",
+      priority: task.priority || "medium",
+      status: task.status || "pending",
       due_date: task.due_date ? task.due_date.split("T")[0] : "",
+      assigned_to: task.assigned_to || "",
+      client_id: task.client_id || "",
     });
     setShowModal(true);
   };
 
   const handleDelete = async (id) => {
-    if (confirm("Are you sure you want to delete this task?")) {
-      try {
-        await fetch(
-          `https://ai-office-employee-api.vercel.app/api/tasks/${id}`,
-          {
-            method: "DELETE",
-          }
-        );
+    if (!confirm("Are you sure you want to delete this task?")) return;
+    try {
+      const res = await fetch(`${API_URL}/api/tasks/${id}`, {
+        method: "DELETE",
+        headers: authHeader(),
+      });
+      if (res.ok) {
         fetchTasks();
-      } catch (error) {
-        console.error("Failed to delete task:", error);
+      } else {
+        setError('Failed to delete task.');
       }
+    } catch {
+      setError('Cannot reach server.');
     }
   };
 
   const handleStatusChange = async (id, newStatus) => {
     try {
-      await fetch(`https://ai-office-employee-api.vercel.app/api/tasks/${id}`, {
+      await fetch(`${API_URL}/api/tasks/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader() },
         body: JSON.stringify({ status: newStatus }),
       });
       fetchTasks();
-    } catch (error) {
-      console.error("Failed to update status:", error);
+    } catch {
+      setError('Failed to update status.');
     }
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingTask(null);
+    setFormData(emptyForm);
+    setFormError('');
   };
 
   const filteredTasks =
@@ -176,19 +188,23 @@ export default function Tasks() {
             <option value="high">High</option>
             <option value="urgent">Urgent</option>
           </select>
-          <button className="btn btn-secondary" onClick={fetchTasks}>
-            Refresh
+          <button className="btn btn-secondary" onClick={fetchTasks} disabled={loading}>
+            {loading ? 'Loading...' : 'Refresh'}
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowModal(true)}
-          >
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
             Add Task
           </button>
         </div>
       </div>
 
-      {filteredTasks.length === 0 ? (
+      {error && <div className="error-banner">{error}</div>}
+
+      {loading ? (
+        <div className="loading-state">
+          <div className="spinner"></div>
+          <p>Loading tasks...</p>
+        </div>
+      ) : filteredTasks.length === 0 ? (
         <p className="no-data">No tasks found</p>
       ) : (
         <table className="tasks-table">
@@ -198,6 +214,8 @@ export default function Tasks() {
               <th>Description</th>
               <th>Priority</th>
               <th>Status</th>
+              <th>Assigned To</th>
+              <th>Client</th>
               <th>Due Date</th>
               <th>Actions</th>
             </tr>
@@ -218,9 +236,7 @@ export default function Tasks() {
                 <td>
                   <select
                     value={task.status}
-                    onChange={(e) =>
-                      handleStatusChange(task.id, e.target.value)
-                    }
+                    onChange={(e) => handleStatusChange(task.id, e.target.value)}
                     className="status-select"
                   >
                     <option value="pending">Pending</option>
@@ -229,24 +245,14 @@ export default function Tasks() {
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </td>
+                <td>{task.assigned_user_name || "-"}</td>
+                <td>{task.client_name || "-"}</td>
                 <td>
-                  {task.due_date
-                    ? new Date(task.due_date).toLocaleDateString()
-                    : "-"}
+                  {task.due_date ? new Date(task.due_date).toLocaleDateString() : "-"}
                 </td>
                 <td>
-                  <button
-                    className="btn btn-small"
-                    onClick={() => handleEdit(task)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn btn-small btn-danger"
-                    onClick={() => handleDelete(task.id)}
-                  >
-                    Delete
-                  </button>
+                  <button className="btn btn-small" onClick={() => handleEdit(task)}>Edit</button>
+                  <button className="btn btn-small btn-danger" onClick={() => handleDelete(task.id)}>Delete</button>
                 </td>
               </tr>
             ))}
@@ -258,15 +264,14 @@ export default function Tasks() {
         <div className="modal">
           <div className="modal-content">
             <h2>{editingTask ? "Edit Task" : "Add New Task"}</h2>
+            {formError && <div className="error-banner">{formError}</div>}
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Title</label>
+                <label>Title *</label>
                 <input
                   type="text"
                   value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
                 />
               </div>
@@ -274,18 +279,14 @@ export default function Tasks() {
                 <label>Description</label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
               <div className="form-group">
                 <label>Priority</label>
                 <select
                   value={formData.priority}
-                  onChange={(e) =>
-                    setFormData({ ...formData, priority: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -297,9 +298,7 @@ export default function Tasks() {
                 <label>Status</label>
                 <select
                   value={formData.status}
-                  onChange={(e) =>
-                    setFormData({ ...formData, status: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 >
                   <option value="pending">Pending</option>
                   <option value="in_progress">In Progress</option>
@@ -312,24 +311,18 @@ export default function Tasks() {
                 <input
                   type="date"
                   value={formData.due_date}
-                  onChange={(e) =>
-                    setFormData({ ...formData, due_date: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
                 />
               </div>
               <div className="form-group">
                 <label>Assigned To</label>
                 <select
                   value={formData.assigned_to}
-                  onChange={(e) =>
-                    setFormData({ ...formData, assigned_to: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
                 >
                   <option value="">-- Unassigned --</option>
                   {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name}
-                    </option>
+                    <option key={user.id} value={user.id}>{user.name}</option>
                   ))}
                 </select>
               </div>
@@ -337,39 +330,19 @@ export default function Tasks() {
                 <label>Client</label>
                 <select
                   value={formData.client_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, client_id: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
                 >
                   <option value="">-- No Client (Internal) --</option>
                   {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.name}
-                    </option>
+                    <option key={client.id} value={client.id}>{client.name}</option>
                   ))}
                 </select>
               </div>
               <div className="modal-actions">
-                <button type="submit" className="btn btn-primary">
-                  Save
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save'}
                 </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowModal(false);
-                    setEditingTask(null);
-                    setFormData({
-                      title: "",
-                      description: "",
-                      priority: "medium",
-                      status: "pending",
-                      due_date: "",
-                      assigned_to: "",
-                      client_id: "",
-                    });
-                  }}
-                >
+                <button type="button" className="btn btn-secondary" onClick={closeModal} disabled={saving}>
                   Cancel
                 </button>
               </div>

@@ -1,4 +1,5 @@
 const taskService = require('../services/taskService');
+const { logActivity } = require('../services/activityService');
 
 /**
  * GET /tasks
@@ -58,6 +59,9 @@ const createTask = async (req, res, next) => {
       client_id
     });
 
+    // Log activity
+    await logActivity(req.user?.id, 'CREATE', 'task', task.id, { title: task.title });
+
     res.status(201).json({ success: true, data: task });
   } catch (err) {
     next(err);
@@ -89,6 +93,9 @@ const updateTask = async (req, res, next) => {
       client_id
     });
 
+    // Log activity
+    await logActivity(req.user?.id, 'UPDATE', 'task', task.id, { title: task.title, status: task.status });
+
     res.json({ success: true, data: task });
   } catch (err) {
     next(err);
@@ -109,6 +116,10 @@ const deleteTask = async (req, res, next) => {
     }
 
     await taskService.deleteTask(req.params.id);
+
+    // Log activity
+    await logActivity(req.user?.id, 'DELETE', 'task', req.params.id, { title: existingTask.title });
+
     res.json({ success: true, message: 'Task deleted successfully' });
   } catch (err) {
     next(err);

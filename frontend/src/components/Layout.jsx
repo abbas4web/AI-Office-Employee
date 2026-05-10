@@ -1,12 +1,14 @@
 import { Outlet, Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
 
 export default function Layout() {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+
+  // Get logged-in user name from localStorage
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     navigate("/login");
   };
 
@@ -21,6 +23,7 @@ export default function Layout() {
           <Link to="/tasks">Tasks</Link>
           <Link to="/clients">Clients</Link>
           <Link to="/reminders">Reminders</Link>
+          {user.name && <span className="nav-user">👤 {user.name}</span>}
           <button onClick={handleLogout} className="logout-btn">
             Logout
           </button>

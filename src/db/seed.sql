@@ -1,11 +1,14 @@
 -- Seed data for AI Office Employee application
 -- Run this after creating the schema to populate sample data
+-- NOTE: password_hash below is bcrypt hash of 'password123'
+-- Prefer using: node src/db/seed.js (which generates the hash at runtime)
 
--- Insert sample users
-INSERT INTO users (name, email, role) VALUES
-    ('John Doe', 'john@company.com', 'admin'),
-    ('Jane Smith', 'jane@company.com', 'manager'),
-    ('Bob Wilson', 'bob@company.com', 'employee');
+-- Insert sample users (password: password123)
+INSERT INTO users (name, email, password_hash, role) VALUES
+    ('John Doe',    'john@company.com', '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'admin'),
+    ('Jane Smith',  'jane@company.com', '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'manager'),
+    ('Bob Wilson',  'bob@company.com',  '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'employee')
+ON CONFLICT (email) DO NOTHING;
 
 -- Insert sample clients
 INSERT INTO clients (name, email, phone, company, notes) VALUES
