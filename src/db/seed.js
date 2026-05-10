@@ -59,17 +59,17 @@ const runSeeder = async () => {
         ('Q1 Report Preparation', 'Prepare quarterly financial report for Acme Corp',
           'high', 'in_progress', NOW() + INTERVAL '3 days',
           (SELECT id FROM users WHERE email = 'john@company.com'),
-          (SELECT id FROM clients WHERE company = 'Acme Corporation')),
+          (SELECT id FROM clients WHERE company = 'Acme Corporation' LIMIT 1)),
 
         ('Website Migration', 'Migrate TechStart website to new hosting',
           'urgent', 'pending', NOW() + INTERVAL '1 day',
           (SELECT id FROM users WHERE email = 'jane@company.com'),
-          (SELECT id FROM clients WHERE company = 'TechStart')),
+          (SELECT id FROM clients WHERE company = 'TechStart' LIMIT 1)),
 
         ('Contract Review', 'Review and update service contracts',
           'medium', 'pending', NOW() + INTERVAL '7 days',
           (SELECT id FROM users WHERE email = 'bob@company.com'),
-          (SELECT id FROM clients WHERE company = 'Global Solutions Ltd')),
+          (SELECT id FROM clients WHERE company = 'Global Solutions Ltd' LIMIT 1)),
 
         ('Team Meeting', 'Weekly team sync meeting',
           'low', 'completed', NOW() - INTERVAL '1 day',
@@ -82,11 +82,11 @@ const runSeeder = async () => {
     await client.query(
       `INSERT INTO reminders (user_id, task_id, title, message, reminder_time) VALUES
         ((SELECT id FROM users WHERE email = 'john@company.com'),
-         (SELECT id FROM tasks WHERE title = 'Q1 Report Preparation'),
+         (SELECT id FROM tasks WHERE title = 'Q1 Report Preparation' LIMIT 1),
          'Report Due Soon', 'Q1 report is due in 3 days', NOW() + INTERVAL '1 day'),
 
         ((SELECT id FROM users WHERE email = 'jane@company.com'),
-         (SELECT id FROM tasks WHERE title = 'Website Migration'),
+         (SELECT id FROM tasks WHERE title = 'Website Migration' LIMIT 1),
          'Urgent Task', 'Website migration deadline approaching', NOW() + INTERVAL '2 hours')
        ON CONFLICT DO NOTHING`
     );
@@ -95,10 +95,10 @@ const runSeeder = async () => {
     // --- Activity Logs (Seed some fake logs so the page isn't empty) ---
     await client.query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details, created_at) VALUES
-        ((SELECT id FROM users WHERE email = 'john@company.com'), 'CREATE', 'task', (SELECT id FROM tasks WHERE title = 'Q1 Report Preparation'), '{"title": "Q1 Report Preparation"}', NOW() - INTERVAL '2 days'),
-        ((SELECT id FROM users WHERE email = 'jane@company.com'), 'CREATE', 'client', (SELECT id FROM clients WHERE company = 'TechStart'), '{"name": "TechStart Inc"}', NOW() - INTERVAL '1 day'),
-        ((SELECT id FROM users WHERE email = 'bob@company.com'), 'UPDATE', 'task', (SELECT id FROM tasks WHERE title = 'Contract Review'), '{"status": "in_progress", "title": "Contract Review"}', NOW() - INTERVAL '5 hours'),
-        ((SELECT id FROM users WHERE email = 'john@company.com'), 'COMPLETE', 'task', (SELECT id FROM tasks WHERE title = 'Team Meeting'), '{"status": "completed", "title": "Team Meeting"}', NOW() - INTERVAL '1 hour')
+        ((SELECT id FROM users WHERE email = 'john@company.com'), 'CREATE', 'task', (SELECT id FROM tasks WHERE title = 'Q1 Report Preparation' LIMIT 1), '{"title": "Q1 Report Preparation"}', NOW() - INTERVAL '2 days'),
+        ((SELECT id FROM users WHERE email = 'jane@company.com'), 'CREATE', 'client', (SELECT id FROM clients WHERE company = 'TechStart' LIMIT 1), '{"name": "TechStart Inc"}', NOW() - INTERVAL '1 day'),
+        ((SELECT id FROM users WHERE email = 'bob@company.com'), 'UPDATE', 'task', (SELECT id FROM tasks WHERE title = 'Contract Review' LIMIT 1), '{"status": "in_progress", "title": "Contract Review"}', NOW() - INTERVAL '5 hours'),
+        ((SELECT id FROM users WHERE email = 'john@company.com'), 'COMPLETE', 'task', (SELECT id FROM tasks WHERE title = 'Team Meeting' LIMIT 1), '{"status": "completed", "title": "Team Meeting"}', NOW() - INTERVAL '1 hour')
        ON CONFLICT DO NOTHING`
     );
     console.log('Inserted sample activity logs.');
