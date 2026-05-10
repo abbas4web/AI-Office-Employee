@@ -1,0 +1,22 @@
+import { Routes, Route, Navigate } from 'react-router-dom'
+import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
+import Tasks from './pages/Tasks'
+import Clients from './pages/Clients'
+import Layout from './components/Layout'
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/" element={<Layout />}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="tasks" element={<Tasks />} />
+        <Route path="clients" element={<Clients />} />
+      </Route>
+    </Routes>
+  )
+}
+
+export default App
