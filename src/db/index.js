@@ -35,4 +35,4 @@ const testConnection = async () => {
   }
 };
 
-module.exports = { query, testConnection, pool };
+module.exports = { query, testConnection };
