@@ -133,6 +133,9 @@ export default function Tasks() {
             <option value="high">High</option>
             <option value="urgent">Urgent</option>
           </select>
+          <button className="btn btn-secondary" onClick={fetchTasks}>
+            Refresh
+          </button>
           <button
             className="btn btn-primary"
             onClick={() => setShowModal(true)}

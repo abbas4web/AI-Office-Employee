@@ -177,8 +177,14 @@ body {
 }
 
 /* Dashboard */
-.dashboard h1 {
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 2rem;
+}
+
+.dashboard h1 {
   color: #2c3e50;
 }
 

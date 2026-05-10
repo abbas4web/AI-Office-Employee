@@ -42,7 +42,12 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
-      <h1>Dashboard</h1>
+      <div className="dashboard-header">
+        <h1>Dashboard</h1>
+        <button className="btn btn-secondary" onClick={fetchStats}>
+          Refresh
+        </button>
+      </div>
       <div className="stats-grid">
         <div className="stat-card">
           <h3>Total Tasks</h3>
