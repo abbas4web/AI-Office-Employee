@@ -20,6 +20,7 @@ app.get('/', (req, res) => {
 app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/clients', clientRoutes);
+app.use('/api/cron', cronRoutes);
 
 // --- Error Handler (must be last) ---
 app.use(errorHandler);
