@@ -8,35 +8,34 @@ export default function Dashboard() {
     completed: 0,
   });
 
-  useEffect(() => {
-    // Fetch stats from API
-    const fetchStats = async () => {
-      try {
-        const tasksRes = await fetch(
-          "https://ai-office-employee-api.vercel.app/api/tasks"
-        );
-        const tasksData = await tasksRes.json();
+  const fetchStats = async () => {
+    try {
+      const tasksRes = await fetch(
+        "https://ai-office-employee-api.vercel.app/api/tasks"
+      );
+      const tasksData = await tasksRes.json();
 
-        const clientsRes = await fetch(
-          "https://ai-office-employee-api.vercel.app/api/clients"
-        );
-        const clientsData = await clientsRes.json();
+      const clientsRes = await fetch(
+        "https://ai-office-employee-api.vercel.app/api/clients"
+      );
+      const clientsData = await clientsRes.json();
 
-        if (tasksData.success && clientsData.success) {
-          const tasks = tasksData.data;
-          setStats({
-            tasks: tasks.length,
-            clients: clientsData.data.length,
-            pending: tasks.filter((t) => t.status === "pending").length,
-            completed: tasks.filter((t) => t.status === "completed").length,
-            urgent: tasks.filter((t) => t.priority === "urgent").length,
-          });
-        }
-      } catch (error) {
-        console.error("Failed to fetch stats:", error);
+      if (tasksData.success && clientsData.success) {
+        const tasks = tasksData.data;
+        setStats({
+          tasks: tasks.length,
+          clients: clientsData.data.length,
+          pending: tasks.filter((t) => t.status === "pending").length,
+          completed: tasks.filter((t) => t.status === "completed").length,
+          urgent: tasks.filter((t) => t.priority === "urgent").length,
+        });
       }
-    };
+    } catch (error) {
+      console.error("Failed to fetch stats:", error);
+    }
+  };
 
+  useEffect(() => {
     fetchStats();
   }, []);
 
