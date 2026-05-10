@@ -8,6 +8,7 @@ const clientRoutes = require('./routes/clientRoutes');
 const cronRoutes = require('./routes/cronRoutes');
 const reminderRoutes = require('./routes/reminderRoutes');
 const debugRoutes = require('./routes/debugRoutes');
+const activityRoutes = require('./routes/activityRoutes');
 const errorHandler = require('./middleware/errorHandler');
 const { protect } = require('./middleware/authMiddleware');
 
@@ -32,6 +33,7 @@ app.use('/api/clients', protect, clientRoutes);
 app.use('/api/cron', protect, cronRoutes);
 app.use('/api/reminders', protect, reminderRoutes);
 app.use('/api/debug', protect, debugRoutes);
+app.use('/api/activity-logs', protect, activityRoutes);
 
 // --- Error Handler (must be last) ---
 app.use(errorHandler);

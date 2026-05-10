@@ -610,3 +610,79 @@ body {
   font-size: 0.8rem;
 }
 
+/* ── Activity Timeline ─────────────────────────────────────── */
+.timeline {
+  position: relative;
+  padding-left: 2rem;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0.75rem;
+  width: 2px;
+  background-color: #e0e0e0;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 1.5rem;
+  background: white;
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.timeline-badge {
+  position: absolute;
+  top: 1.25rem;
+  left: -2rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: bold;
+  box-shadow: 0 0 0 4px #f5f5f5;
+}
+
+.timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.timeline-action {
+  color: #7f8c8d;
+}
+
+.timeline-date {
+  color: #95a5a6;
+  font-size: 0.85rem;
+  margin-left: auto;
+}
+
+.timeline-details {
+  background: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  border-left: 3px solid #ddd;
+}
+
+.timeline-details p {
+  margin-bottom: 0.25rem;
+}
+
+.timeline-details p:last-child {
+  margin-bottom: 0;
+}
+

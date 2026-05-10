@@ -93,8 +93,13 @@ const updateTask = async (req, res, next) => {
       client_id
     });
 
-    // Log activity
-    await logActivity(req.user?.id, 'UPDATE', 'task', task.id, { title: task.title, status: task.status });
+    // Use distinct action when a task is marked as completed
+    const action = status === 'completed' ? 'COMPLETE' : 'UPDATE';
+    await logActivity(req.user?.id, action, 'task', task.id, {
+      title: task.title,
+      status: task.status,
+      previous_status: existingTask.status,
+    });
 
     res.json({ success: true, data: task });
   } catch (err) {

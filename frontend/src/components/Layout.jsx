@@ -23,6 +23,7 @@ export default function Layout() {
           <Link to="/tasks">Tasks</Link>
           <Link to="/clients">Clients</Link>
           <Link to="/reminders">Reminders</Link>
+          <Link to="/activity">Activity</Link>
           {user.name && <span className="nav-user">👤 {user.name}</span>}
           <button onClick={handleLogout} className="logout-btn">
             Logout
