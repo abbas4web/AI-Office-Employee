@@ -92,6 +92,17 @@ const runSeeder = async () => {
     );
     console.log('Inserted reminders.');
 
+    // --- Activity Logs (Seed some fake logs so the page isn't empty) ---
+    await client.query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details, created_at) VALUES
+        ((SELECT id FROM users WHERE email = 'john@company.com'), 'CREATE', 'task', (SELECT id FROM tasks WHERE title = 'Q1 Report Preparation'), '{"title": "Q1 Report Preparation"}', NOW() - INTERVAL '2 days'),
+        ((SELECT id FROM users WHERE email = 'jane@company.com'), 'CREATE', 'client', (SELECT id FROM clients WHERE company = 'TechStart'), '{"name": "TechStart Inc"}', NOW() - INTERVAL '1 day'),
+        ((SELECT id FROM users WHERE email = 'bob@company.com'), 'UPDATE', 'task', (SELECT id FROM tasks WHERE title = 'Contract Review'), '{"status": "in_progress", "title": "Contract Review"}', NOW() - INTERVAL '5 hours'),
+        ((SELECT id FROM users WHERE email = 'john@company.com'), 'COMPLETE', 'task', (SELECT id FROM tasks WHERE title = 'Team Meeting'), '{"status": "completed", "title": "Team Meeting"}', NOW() - INTERVAL '1 hour')
+       ON CONFLICT DO NOTHING`
+    );
+    console.log('Inserted sample activity logs.');
+
     console.log('\n✅ Seed completed!');
     console.log('   Login with: john@company.com / password123');
     console.log('               jane@company.com / password123');
