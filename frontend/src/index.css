@@ -210,6 +210,22 @@ body {
   color: #2c3e50;
 }
 
+.urgent-card {
+  border-left: 4px solid #9c27b0;
+}
+
+.urgent-card .stat-number {
+  color: #9c27b0;
+}
+
+.completed-card {
+  border-left: 4px solid #4caf50;
+}
+
+.completed-card .stat-number {
+  color: #4caf50;
+}
+
 .recent-activity {
   background: white;
   padding: 2rem;
