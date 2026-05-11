@@ -53,6 +53,10 @@ const runSeeder = async () => {
     console.log('Inserted clients.');
 
     // --- Tasks ---
+    // Delete existing seed tasks first to avoid duplicates on re-run
+    await client.query(
+      `DELETE FROM tasks WHERE title IN ('Q1 Report Preparation','Website Migration','Contract Review','Team Meeting')`
+    );
     await client.query(
       `INSERT INTO tasks (title, description, priority, status, due_date, assigned_to, client_id)
        VALUES
@@ -73,12 +77,15 @@ const runSeeder = async () => {
 
         ('Team Meeting', 'Weekly team sync meeting',
           'low', 'completed', NOW() - INTERVAL '1 day',
-          (SELECT id FROM users WHERE email = 'john@company.com'), NULL)
-       ON CONFLICT DO NOTHING`
+          (SELECT id FROM users WHERE email = 'john@company.com'), NULL)`
     );
     console.log('Inserted tasks.');
 
     // --- Reminders ---
+    // Delete existing seed reminders first
+    await client.query(
+      `DELETE FROM reminders WHERE title IN ('Report Due Soon','Urgent Task')`
+    );
     await client.query(
       `INSERT INTO reminders (user_id, task_id, title, message, reminder_time) VALUES
         ((SELECT id FROM users WHERE email = 'john@company.com'),
@@ -87,21 +94,23 @@ const runSeeder = async () => {
 
         ((SELECT id FROM users WHERE email = 'jane@company.com'),
          (SELECT id FROM tasks WHERE title = 'Website Migration' LIMIT 1),
-         'Urgent Task', 'Website migration deadline approaching', NOW() + INTERVAL '2 hours')
-       ON CONFLICT DO NOTHING`
+         'Urgent Task', 'Website migration deadline approaching', NOW() + INTERVAL '2 hours')`
     );
     console.log('Inserted reminders.');
 
-    // --- Activity Logs (Seed some fake logs so the page isn't empty) ---
+    // --- Activity Logs ---
+    // Clear old seed logs and re-insert fresh ones
+    await client.query(
+      `DELETE FROM activity_logs WHERE details->>'title' IN ('Q1 Report Preparation','Team Meeting','Contract Review')
+          OR details->>'name' = 'TechStart Inc'`
+    );
     await client.query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details, created_at) VALUES
         ((SELECT id FROM users WHERE email = 'john@company.com'), 'CREATE', 'task', (SELECT id FROM tasks WHERE title = 'Q1 Report Preparation' LIMIT 1), '{"title": "Q1 Report Preparation"}', NOW() - INTERVAL '2 days'),
         ((SELECT id FROM users WHERE email = 'jane@company.com'), 'CREATE', 'client', (SELECT id FROM clients WHERE company = 'TechStart' LIMIT 1), '{"name": "TechStart Inc"}', NOW() - INTERVAL '1 day'),
         ((SELECT id FROM users WHERE email = 'bob@company.com'), 'UPDATE', 'task', (SELECT id FROM tasks WHERE title = 'Contract Review' LIMIT 1), '{"status": "in_progress", "title": "Contract Review"}', NOW() - INTERVAL '5 hours'),
-        ((SELECT id FROM users WHERE email = 'john@company.com'), 'COMPLETE', 'task', (SELECT id FROM tasks WHERE title = 'Team Meeting' LIMIT 1), '{"status": "completed", "title": "Team Meeting"}', NOW() - INTERVAL '1 hour')
-       ON CONFLICT DO NOTHING`
+        ((SELECT id FROM users WHERE email = 'john@company.com'), 'COMPLETE', 'task', (SELECT id FROM tasks WHERE title = 'Team Meeting' LIMIT 1), '{"status": "completed", "title": "Team Meeting"}', NOW() - INTERVAL '1 hour')`
     );
-    console.log('Inserted sample activity logs.');
 
     console.log('\n✅ Seed completed!');
     console.log('   Login with: john@company.com / password123');
