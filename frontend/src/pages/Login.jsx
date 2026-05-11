@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { API_URL } from '../api'
 
 export default function Login() {
@@ -73,11 +73,17 @@ export default function Login() {
               disabled={loading}
             />
           </div>
-          <button type="submit" className="btn btn-primary" disabled={loading}>
+          <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%' }}>
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+
+        <p style={{ textAlign: 'center', marginTop: '1rem', color: '#7f8c8d' }}>
+          Don't have an account?{' '}
+          <Link to="/register" style={{ color: '#3498db' }}>Create account</Link>
+        </p>
       </div>
     </div>
+
   )
 }
