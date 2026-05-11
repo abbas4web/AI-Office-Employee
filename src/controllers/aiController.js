@@ -3,14 +3,13 @@ const db = require('../db');
 
 /**
  * POST /api/ai/ask
- * Fetches the user's real tasks + clients from DB and injects them
- * as context so the AI can give meaningful, data-aware answers.
- * Body: { prompt: string }
+ * Fetches ALL portal data from DB and injects it as context,
+ * including the currently logged-in user from the JWT.
  */
 const askAI = async (req, res, next) => {
   try {
     const { prompt } = req.body;
-    const userId = req.user?.id;
+    const currentUser = req.user; // from JWT middleware
 
     if (!prompt || !prompt.trim()) {
       const err = new Error('Prompt is required');
@@ -18,52 +17,123 @@ const askAI = async (req, res, next) => {
       return next(err);
     }
 
-    // --- Fetch real data from DB ---
-    const [tasksResult, clientsResult] = await Promise.all([
+    // --- Fetch all portal data in parallel ---
+    const [tasksResult, clientsResult, usersResult, remindersResult, activityResult] = await Promise.all([
+      // Tasks with assignee and client names
       db.query(
         `SELECT t.title, t.description, t.priority, t.status, t.due_date,
-                u.name AS assigned_to, c.name AS client
+                u.name AS assigned_to, c.name AS client_name
          FROM tasks t
          LEFT JOIN users u ON t.assigned_to = u.id
          LEFT JOIN clients c ON t.client_id = c.id
          ORDER BY t.due_date ASC NULLS LAST
-         LIMIT 20`,
+         LIMIT 30`,
         []
       ),
-      db.query('SELECT name, company, email FROM clients ORDER BY name LIMIT 10', []),
+      // All clients
+      db.query(
+        `SELECT name, company, email, phone, notes FROM clients ORDER BY name LIMIT 20`,
+        []
+      ),
+      // All users/employees
+      db.query(
+        `SELECT name, email, role FROM users ORDER BY name`,
+        []
+      ),
+      // Upcoming/unread reminders
+      db.query(
+        `SELECT r.title, r.message, r.is_read, t.title AS task_title
+         FROM reminders r
+         LEFT JOIN tasks t ON r.task_id = t.id
+         ORDER BY r.created_at DESC LIMIT 10`,
+        []
+      ),
+      // Recent activity
+      db.query(
+        `SELECT al.action, al.entity_type, al.details, al.created_at, u.name AS performed_by
+         FROM activity_logs al
+         LEFT JOIN users u ON al.user_id = u.id
+         ORDER BY al.created_at DESC LIMIT 10`,
+        []
+      ),
     ]);
 
+    // --- Build full context string ---
+    let context = '=== PORTAL DATA ===\n\n';
+
+    // Current logged-in user
+    context += `CURRENTLY LOGGED IN USER:\n`;
+    context += `  Name: ${currentUser.name}\n`;
+    context += `  Email: ${currentUser.email}\n`;
+    context += `  Role: ${currentUser.role}\n\n`;
+
+    // Tasks
     const tasks = tasksResult.rows;
-    const clients = clientsResult.rows;
-
-    // --- Build context string ---
-    let context = '=== CURRENT SYSTEM DATA ===\n\n';
-
+    context += `TASKS (${tasks.length} total):\n`;
     if (tasks.length > 0) {
-      context += 'TASKS:\n';
       tasks.forEach((t, i) => {
-        context += `${i + 1}. [${t.priority?.toUpperCase()}] "${t.title}"`;
+        context += `  ${i + 1}. [${(t.priority || 'medium').toUpperCase()}] "${t.title}"`;
         context += ` | Status: ${t.status}`;
-        if (t.assigned_to) context += ` | Assigned: ${t.assigned_to}`;
-        if (t.client)      context += ` | Client: ${t.client}`;
-        if (t.due_date)    context += ` | Due: ${new Date(t.due_date).toLocaleDateString()}`;
+        if (t.assigned_to)  context += ` | Assigned to: ${t.assigned_to}`;
+        if (t.client_name)  context += ` | Client: ${t.client_name}`;
+        if (t.due_date)     context += ` | Due: ${new Date(t.due_date).toLocaleDateString('en-IN')}`;
         context += '\n';
       });
     } else {
-      context += 'TASKS: None found.\n';
+      context += '  No tasks found.\n';
     }
 
+    // Clients
+    const clients = clientsResult.rows;
+    context += `\nCLIENTS (${clients.length} total):\n`;
     if (clients.length > 0) {
-      context += '\nCLIENTS:\n';
       clients.forEach((c, i) => {
-        context += `${i + 1}. ${c.name}`;
+        context += `  ${i + 1}. ${c.name}`;
         if (c.company) context += ` (${c.company})`;
         if (c.email)   context += ` — ${c.email}`;
+        if (c.phone)   context += ` | ${c.phone}`;
         context += '\n';
       });
+    } else {
+      context += '  No clients found.\n';
     }
 
-    context += '\n=== END OF DATA ===\n';
+    // Users/Employees
+    const users = usersResult.rows;
+    context += `\nEMPLOYEES / USERS (${users.length} total):\n`;
+    users.forEach((u, i) => {
+      context += `  ${i + 1}. ${u.name} — ${u.email} (${u.role})\n`;
+    });
+
+    // Reminders
+    const reminders = remindersResult.rows;
+    context += `\nREMINDERS (${reminders.length} recent):\n`;
+    if (reminders.length > 0) {
+      reminders.forEach((r, i) => {
+        context += `  ${i + 1}. "${r.title}" — ${r.message}`;
+        if (r.task_title) context += ` (Task: ${r.task_title})`;
+        context += ` | Read: ${r.is_read ? 'Yes' : 'No'}\n`;
+      });
+    } else {
+      context += '  No reminders found.\n';
+    }
+
+    // Recent Activity
+    const activity = activityResult.rows;
+    context += `\nRECENT ACTIVITY (last ${activity.length} events):\n`;
+    if (activity.length > 0) {
+      activity.forEach((a, i) => {
+        const when = new Date(a.created_at).toLocaleString('en-IN');
+        const detail = a.details?.title || a.details?.name || '';
+        context += `  ${i + 1}. ${a.performed_by || 'System'} ${a.action} ${a.entity_type}`;
+        if (detail) context += ` "${detail}"`;
+        context += ` at ${when}\n`;
+      });
+    } else {
+      context += '  No recent activity.\n';
+    }
+
+    context += '\n=== END OF PORTAL DATA ===\n';
 
     const reply = await sendPromptWithContext(context, prompt.trim());
     res.json({ success: true, reply });
