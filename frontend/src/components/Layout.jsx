@@ -1,4 +1,5 @@
 import { Outlet, Link, useNavigate } from "react-router-dom";
+import AiChat from "./AiChat";
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ export default function Layout() {
       <main className="main-content">
         <Outlet />
       </main>
+      <AiChat />
     </div>
   );
 }
