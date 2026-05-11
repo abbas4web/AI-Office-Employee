@@ -14,6 +14,11 @@ export default function Dashboard() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState('');
 
+  // AI Productivity state
+  const [productivity, setProductivity] = useState(null);
+  const [productivityLoading, setProductivityLoading] = useState(false);
+  const [productivityError, setProductivityError] = useState('');
+
   const fetchStats = async () => {
     setLoading(true);
     setError('');
@@ -63,6 +68,28 @@ export default function Dashboard() {
       setSummaryError('Cannot reach AI service.');
     } finally {
       setSummaryLoading(false);
+    }
+  };
+
+  const fetchProductivity = async () => {
+    setProductivityLoading(true);
+    setProductivityError('');
+    setProductivity(null);
+    try {
+      const res = await fetch(`${API_URL}/api/ai/productivity`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProductivity(data.data);
+      } else {
+        setProductivityError('Failed to generate suggestions.');
+      }
+    } catch {
+      setProductivityError('Cannot reach AI service.');
+    } finally {
+      setProductivityLoading(false);
     }
   };
 
@@ -202,6 +229,105 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* ── AI Productivity Suggestions ── */}
+      <div className="ai-summary-section">
+        <div className="ai-summary-header">
+          <h2>📈 Productivity Suggestions</h2>
+          <button
+            className="btn btn-primary"
+            onClick={fetchProductivity}
+            disabled={productivityLoading}
+          >
+            {productivityLoading ? 'Analyzing...' : productivity ? 'Refresh' : 'Analyze Workload'}
+          </button>
+        </div>
+
+        {productivityError && <div className="error-banner">{productivityError}</div>}
+
+        {productivityLoading && (
+          <div className="loading-state" style={{ padding: '2rem' }}>
+            <div className="spinner"></div>
+            <p>AI is analyzing your workload...</p>
+          </div>
+        )}
+
+        {productivity && !productivityLoading && (
+          <div className="ai-summary-card">
+            {/* Productivity Score */}
+            {productivity.productivity_score !== undefined && (
+              <div className="productivity-score-row">
+                <span className="score-label">Productivity Score</span>
+                <div className="score-bar-wrap">
+                  <div
+                    className="score-bar"
+                    style={{
+                      width: `${productivity.productivity_score}%`,
+                      background: productivity.productivity_score >= 70
+                        ? '#4caf50' : productivity.productivity_score >= 40
+                        ? '#ff9800' : '#e74c3c'
+                    }}
+                  />
+                </div>
+                <span className="score-value">{productivity.productivity_score}/100</span>
+              </div>
+            )}
+
+            {/* Summary */}
+            <p className="ai-summary-text">{productivity.summary}</p>
+
+            {/* Top Priority */}
+            {productivity.top_priority && (
+              <div className="ai-summary-block">
+                <h4>🎯 Top Priority Right Now</h4>
+                <div className="priority-box">
+                  <strong>{productivity.top_priority.task}</strong>
+                  <p>{productivity.top_priority.reason}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Risks */}
+            {productivity.risks?.length > 0 && (
+              <div className="ai-summary-block">
+                <h4>⚠️ Identified Risks</h4>
+                <ul>
+                  {productivity.risks.map((r, i) => (
+                    <li key={i}>
+                      <span className={`risk-badge ${r.severity}`}>{r.severity}</span>
+                      {' '}<strong>{r.title}</strong> — {r.description}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Workload Issues */}
+            {productivity.workload_issues?.length > 0 && (
+              <div className="ai-summary-block">
+                <h4>🔄 Workload Issues</h4>
+                <ul>
+                  {productivity.workload_issues.map((w, i) => (
+                    <li key={i}><strong>{w.issue}</strong> — {w.detail}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Quick Wins */}
+            {productivity.quick_wins?.length > 0 && (
+              <div className="ai-summary-block">
+                <h4>⚡ Quick Wins</h4>
+                <ul>
+                  {productivity.quick_wins.map((qw, i) => (
+                    <li key={i}>{qw}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Quick Links */}
       <div className="recent-activity">
         <h2>Quick Links</h2>
@@ -215,3 +341,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

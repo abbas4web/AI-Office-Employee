@@ -1,4 +1,4 @@
-const { sendPromptWithContext, getTaskSummaryJSON } = require('../services/groqService');
+const { sendPromptWithContext, getTaskSummaryJSON, getProductivitySuggestions } = require('../services/groqService');
 const db = require('../db');
 
 /**
@@ -202,4 +202,55 @@ const taskSummary = async (req, res, next) => {
   }
 };
 
-module.exports = { askAI, taskSummary };
+/**
+ * POST /api/ai/productivity
+ * Analyzes tasks + team workload and returns short, professional suggestions:
+ * top priority, risks, workload issues, quick wins, productivity score.
+ */
+const productivitySuggestions = async (req, res, next) => {
+  try {
+    const now = new Date();
+
+    // Fetch tasks + team size in parallel
+    const [tasksResult, usersResult] = await Promise.all([
+      db.query(
+        `SELECT t.title, t.priority, t.status, t.due_date,
+                u.name AS assigned_to
+         FROM tasks t
+         LEFT JOIN users u ON t.assigned_to = u.id
+         ORDER BY t.due_date ASC NULLS LAST
+         LIMIT 30`,
+        []
+      ),
+      db.query(`SELECT COUNT(*) AS total FROM users`, []),
+    ]);
+
+    const tasks = tasksResult.rows.map(t => ({
+      title: t.title,
+      priority: t.priority,
+      status: t.status,
+      assigned_to: t.assigned_to || 'Unassigned',
+      due_date: t.due_date ? t.due_date.toISOString().split('T')[0] : null,
+      is_overdue: t.due_date && new Date(t.due_date) < now && t.status !== 'completed',
+    }));
+
+    const payload = {
+      today: now.toISOString().split('T')[0],
+      team_size: parseInt(usersResult.rows[0].total),
+      task_count: tasks.length,
+      urgent_count: tasks.filter(t => t.priority === 'urgent' && t.status !== 'completed').length,
+      overdue_count: tasks.filter(t => t.is_overdue).length,
+      pending_count: tasks.filter(t => t.status === 'pending').length,
+      in_progress_count: tasks.filter(t => t.status === 'in_progress').length,
+      completed_count: tasks.filter(t => t.status === 'completed').length,
+      tasks,
+    };
+
+    const result = await getProductivitySuggestions(payload);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { askAI, taskSummary, productivitySuggestions };

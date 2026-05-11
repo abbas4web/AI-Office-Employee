@@ -81,4 +81,46 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
   return JSON.parse(raw);
 };
 
-module.exports = { sendPromptWithContext, getTaskSummaryJSON };
+/**
+ * Generate short, professional productivity suggestions from task + team data.
+ * Returns JSON: priority, risks, workload_issues, quick_wins, summary.
+ *
+ * @param {object} payload - { tasks, userCount, today }
+ * @returns {object} Parsed JSON suggestions
+ */
+const getProductivitySuggestions = async (payload) => {
+  const prompt = `You are a professional office productivity advisor. Analyze this workspace data and provide concise, actionable suggestions.
+
+WORKSPACE DATA:
+${JSON.stringify(payload, null, 2)}
+
+Return ONLY a valid JSON object (no markdown, no explanation):
+{
+  "top_priority": {
+    "task": "<single most important task to do right now>",
+    "reason": "<1 sentence why>"
+  },
+  "risks": [
+    { "title": "<risk name>", "description": "<1 sentence description>", "severity": "high|medium|low" }
+  ],
+  "workload_issues": [
+    { "issue": "<issue name>", "detail": "<1 sentence detail>" }
+  ],
+  "quick_wins": [
+    "<short task or action that can be completed quickly>"
+  ],
+  "productivity_score": <number 0-100 representing current team productivity>,
+  "summary": "<2-3 sentence professional assessment of the office's current productivity state>"
+}`;
+
+  const response = await groq.chat.completions.create({
+    model: 'llama-3.1-8b-instant',
+    response_format: { type: 'json_object' },
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.4,
+  });
+
+  return JSON.parse(response.choices[0].message.content);
+};
+
+module.exports = { sendPromptWithContext, getTaskSummaryJSON, getProductivitySuggestions };
