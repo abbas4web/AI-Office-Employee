@@ -6,6 +6,7 @@ const {
   disconnectGmail,
 } = require('../services/gmailService');
 const { convertEmailToTask } = require('../services/emailToTask');
+const { getEmailAnalysis } = require('../services/groqService');
 
 /**
  * GET /api/gmail/auth-url
@@ -72,13 +73,33 @@ const getEmails = async (req, res, next) => {
 };
 
 /**
+ * POST /api/gmail/emails/analyze
+ * Runs Groq analysis on an email and returns suggested task metadata.
+ * Frontend shows a preview before the user confirms task creation.
+ */
+const analyzeEmail = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.subject) {
+      const err = new Error('Email data is required');
+      err.statusCode = 400;
+      return next(err);
+    }
+    const analysis = await getEmailAnalysis(email);
+    res.json({ success: true, analysis });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * POST /api/gmail/emails/to-task
  * Converts a provided email object into a task.
- * Body: { email: { sender_name, sender_email, subject, snippet } }
+ * If AI analysis is provided in the body, uses it for title/priority/due_date.
  */
 const emailToTask = async (req, res, next) => {
   try {
-    const { email } = req.body;
+    const { email, analysis } = req.body;
 
     if (!email || !email.subject) {
       const err = new Error('Email data is required');
@@ -86,7 +107,16 @@ const emailToTask = async (req, res, next) => {
       return next(err);
     }
 
-    const task = await convertEmailToTask(email, req.user.id);
+    // Use AI-suggested values if provided, otherwise fall back to raw email
+    const enrichedEmail = {
+      ...email,
+      subject: analysis?.task_title || email.subject,
+      priority: analysis?.priority || 'medium',
+      summary: analysis?.summary || null,
+      due_days: analysis?.suggested_due_days || null,
+    };
+
+    const task = await convertEmailToTask(enrichedEmail, req.user.id);
     res.status(201).json({ success: true, task });
   } catch (err) {
     next(err);
@@ -106,4 +136,4 @@ const disconnect = async (req, res, next) => {
   }
 };
 
-module.exports = { getGmailAuthUrl, handleCallback, getStatus, getEmails, emailToTask, disconnect };
+module.exports = { getGmailAuthUrl, handleCallback, getStatus, getEmails, analyzeEmail, emailToTask, disconnect };

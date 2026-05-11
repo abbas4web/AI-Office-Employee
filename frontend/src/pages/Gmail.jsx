@@ -2,6 +2,20 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { API_URL, authHeader } from '../api'
 
+const CATEGORY_LABELS = {
+  client_request: '👤 Client Request',
+  bug_report: '🐛 Bug Report',
+  meeting: '📅 Meeting',
+  invoice: '💰 Invoice',
+  follow_up: '🔁 Follow-up',
+  review: '👁 Review',
+  general: '📌 General',
+}
+
+const PRIORITY_COLORS = {
+  urgent: '#e74c3c', high: '#e67e22', medium: '#3498db', low: '#27ae60',
+}
+
 export default function Gmail() {
   const [searchParams] = useSearchParams()
   const [status, setStatus] = useState({ connected: false, gmail_email: null })
@@ -9,8 +23,15 @@ export default function Gmail() {
   const [emails, setEmails] = useState([])
   const [emailsLoading, setEmailsLoading] = useState(false)
   const [emailsError, setEmailsError] = useState('')
-  const [converting, setConverting] = useState({}) // { emailId: true/false }
-  const [converted, setConverted] = useState({})   // { emailId: taskTitle }
+
+  // Per-email AI analysis state
+  const [analyzing, setAnalyzing] = useState({})    // { id: true }
+  const [analysis, setAnalysis] = useState({})       // { id: analysisObj }
+
+  // Per-email task creation state
+  const [converting, setConverting] = useState({})  // { id: true }
+  const [converted, setConverted] = useState({})    // { id: task }
+
   const [toast, setToast] = useState('')
 
   const showToast = (msg) => {
@@ -18,7 +39,6 @@ export default function Gmail() {
     setTimeout(() => setToast(''), 3500)
   }
 
-  // Check connection status on load
   const checkStatus = useCallback(async () => {
     setStatusLoading(true)
     try {
@@ -34,90 +54,76 @@ export default function Gmail() {
 
   useEffect(() => {
     checkStatus()
-    // Handle redirect back from Google
-    if (searchParams.get('connected') === 'true') {
-      showToast('✅ Gmail connected successfully!')
-    }
-    if (searchParams.get('error')) {
-      showToast('❌ Gmail connection failed. Please try again.')
-    }
+    if (searchParams.get('connected') === 'true') showToast('✅ Gmail connected successfully!')
+    if (searchParams.get('error')) showToast('❌ Gmail connection failed. Please try again.')
   }, [checkStatus, searchParams])
 
-  // Connect Gmail — open Google OAuth in current tab
   const connectGmail = async () => {
     try {
       const res = await fetch(`${API_URL}/api/gmail/auth-url`, { headers: authHeader() })
       const data = await res.json()
       if (data.url) window.location.href = data.url
-    } catch {
-      showToast('❌ Could not initiate Gmail connection.')
-    }
+    } catch { showToast('❌ Could not initiate Gmail connection.') }
   }
 
-  // Disconnect Gmail
   const disconnectGmail = async () => {
     if (!window.confirm('Disconnect your Gmail account?')) return
     try {
-      await fetch(`${API_URL}/api/gmail/disconnect`, {
-        method: 'DELETE',
-        headers: authHeader(),
-      })
-      setStatus({ connected: false })
-      setEmails([])
+      await fetch(`${API_URL}/api/gmail/disconnect`, { method: 'DELETE', headers: authHeader() })
+      setStatus({ connected: false }); setEmails([])
       showToast('Gmail disconnected.')
-    } catch {
-      showToast('❌ Failed to disconnect Gmail.')
-    }
+    } catch { showToast('❌ Failed to disconnect Gmail.') }
   }
 
-  // Fetch emails
   const fetchEmails = async () => {
-    setEmailsLoading(true)
-    setEmailsError('')
+    setEmailsLoading(true); setEmailsError('')
     try {
       const res = await fetch(`${API_URL}/api/gmail/emails?limit=20`, { headers: authHeader() })
       const data = await res.json()
-      if (data.success) {
-        setEmails(data.emails)
-      } else {
-        setEmailsError(data.message || 'Failed to load emails.')
-      }
-    } catch {
-      setEmailsError('Cannot reach server.')
-    } finally {
-      setEmailsLoading(false)
-    }
+      if (data.success) setEmails(data.emails)
+      else setEmailsError(data.message || 'Failed to load emails.')
+    } catch { setEmailsError('Cannot reach server.') }
+    finally { setEmailsLoading(false) }
   }
 
-  // Convert email to task
+  // Step 1: AI analysis
+  const analyzeEmail = async (email) => {
+    setAnalyzing(prev => ({ ...prev, [email.id]: true }))
+    try {
+      const res = await fetch(`${API_URL}/api/gmail/emails/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json()
+      if (data.success) setAnalysis(prev => ({ ...prev, [email.id]: data.analysis }))
+      else showToast('❌ AI analysis failed.')
+    } catch { showToast('❌ Server error.') }
+    finally { setAnalyzing(prev => ({ ...prev, [email.id]: false })) }
+  }
+
+  // Step 2: Confirm task creation with AI data
   const convertToTask = async (email) => {
     setConverting(prev => ({ ...prev, [email.id]: true }))
     try {
       const res = await fetch(`${API_URL}/api/gmail/emails/to-task`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, analysis: analysis[email.id] }),
       })
       const data = await res.json()
       if (data.success) {
-        setConverted(prev => ({ ...prev, [email.id]: data.task.title }))
+        setConverted(prev => ({ ...prev, [email.id]: data.task }))
         showToast(`✅ Task created: "${data.task.title}"`)
-      } else {
-        showToast('❌ Failed to create task.')
-      }
-    } catch {
-      showToast('❌ Server error.')
-    } finally {
-      setConverting(prev => ({ ...prev, [email.id]: false }))
-    }
+      } else showToast('❌ Failed to create task.')
+    } catch { showToast('❌ Server error.') }
+    finally { setConverting(prev => ({ ...prev, [email.id]: false })) }
   }
 
   return (
     <div className="gmail-page">
-      {/* Toast */}
       {toast && <div className="gmail-toast">{toast}</div>}
 
-      {/* Header */}
       <div className="page-header">
         <h1>📧 Gmail Integration</h1>
       </div>
@@ -139,24 +145,20 @@ export default function Gmail() {
               <button className="btn btn-primary" onClick={fetchEmails} disabled={emailsLoading}>
                 {emailsLoading ? 'Loading...' : '📥 Fetch Emails'}
               </button>
-              <button className="btn btn-danger" onClick={disconnectGmail}>
-                Disconnect
-              </button>
+              <button className="btn btn-danger" onClick={disconnectGmail}>Disconnect</button>
             </div>
           </div>
         ) : (
           <div className="gmail-disconnected">
             <div className="gmail-connect-icon">📧</div>
             <h3>Connect Your Gmail</h3>
-            <p>Connect your Gmail account to read emails and convert them into tasks automatically.</p>
-            <button className="btn btn-primary btn-lg" onClick={connectGmail}>
-              🔗 Connect Gmail
-            </button>
+            <p>Read emails and convert them into tasks with AI-powered analysis.</p>
+            <button className="btn btn-primary btn-lg" onClick={connectGmail}>🔗 Connect Gmail</button>
           </div>
         )}
       </div>
 
-      {/* Setup Instructions (shown when not connected) */}
+      {/* Setup Instructions */}
       {!status.connected && !statusLoading && (
         <div className="gmail-setup-card">
           <h3>⚙️ Setup Required</h3>
@@ -165,14 +167,12 @@ export default function Gmail() {
             <li>Create a project → Enable <strong>Gmail API</strong></li>
             <li>Create <strong>OAuth 2.0 credentials</strong> (Web application)</li>
             <li>Add redirect URI: <code>https://ai-office-employee-api.vercel.app/api/gmail/callback</code></li>
-            <li>Copy your <strong>Client ID</strong> and <strong>Client Secret</strong></li>
-            <li>Add them to your Vercel environment variables</li>
-            <li>Redeploy with <code>vercel --prod</code></li>
+            <li>Set app to <strong>External</strong> + add your Gmail as a test user</li>
+            <li>Add Client ID &amp; Secret to Vercel env vars → redeploy</li>
           </ol>
         </div>
       )}
 
-      {/* Emails Error */}
       {emailsError && <div className="error-banner">{emailsError}</div>}
 
       {/* Email List */}
@@ -180,54 +180,90 @@ export default function Gmail() {
         <div className="gmail-emails-section">
           <div className="page-header" style={{ marginBottom: '1rem' }}>
             <h2>📥 Recent Emails ({emails.length})</h2>
-            <button className="btn btn-secondary" onClick={fetchEmails} disabled={emailsLoading}>
-              Refresh
-            </button>
+            <button className="btn btn-secondary" onClick={fetchEmails} disabled={emailsLoading}>Refresh</button>
           </div>
 
           <div className="gmail-email-list">
-            {emails.map((email) => (
-              <div key={email.id} className={`gmail-email-card ${converted[email.id] ? 'converted' : ''}`}>
-                <div className="gmail-email-meta">
-                  <div className="gmail-sender">
-                    <div className="gmail-avatar">
-                      {email.sender_name?.[0]?.toUpperCase() || '?'}
+            {emails.map((email) => {
+              const a = analysis[email.id]
+              const isConverted = !!converted[email.id]
+              return (
+                <div key={email.id} className={`gmail-email-card ${isConverted ? 'converted' : ''}`}>
+                  {/* Email header */}
+                  <div className="gmail-email-meta">
+                    <div className="gmail-sender">
+                      <div className="gmail-avatar">{email.sender_name?.[0]?.toUpperCase() || '?'}</div>
+                      <div>
+                        <strong>{email.sender_name}</strong>
+                        <span className="gmail-email-addr">{email.sender_email}</span>
+                      </div>
                     </div>
-                    <div>
-                      <strong>{email.sender_name}</strong>
-                      <span className="gmail-email-addr">{email.sender_email}</span>
-                    </div>
+                    <span className="gmail-date">{new Date(email.date).toLocaleDateString()}</span>
                   </div>
-                  <span className="gmail-date">{new Date(email.date).toLocaleDateString()}</span>
-                </div>
 
-                <p className="gmail-subject">{email.subject}</p>
-                <p className="gmail-snippet">{email.snippet}</p>
+                  <p className="gmail-subject">{email.subject}</p>
+                  <p className="gmail-snippet">{email.snippet}</p>
 
-                <div className="gmail-email-footer">
-                  {converted[email.id] ? (
-                    <span className="gmail-task-badge">✅ Task created: {converted[email.id]}</span>
-                  ) : (
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => convertToTask(email)}
-                      disabled={converting[email.id]}
-                    >
-                      {converting[email.id] ? 'Creating...' : '➕ Convert to Task'}
-                    </button>
+                  {/* AI Analysis Panel */}
+                  {a && !isConverted && (
+                    <div className="gmail-analysis-panel">
+                      <div className="gmail-analysis-header">
+                        <span>🤖 AI Analysis</span>
+                        <span
+                          className="gmail-priority-badge"
+                          style={{ background: PRIORITY_COLORS[a.priority] + '22', color: PRIORITY_COLORS[a.priority] }}
+                        >
+                          {a.priority?.toUpperCase()}
+                        </span>
+                        {a.is_urgent && <span className="gmail-urgent-badge">🔴 URGENT</span>}
+                      </div>
+                      <p className="gmail-analysis-title">📋 <strong>Task:</strong> {a.task_title}</p>
+                      <p className="gmail-analysis-summary">💡 {a.summary}</p>
+                      <div className="gmail-analysis-meta">
+                        <span>{CATEGORY_LABELS[a.category] || '📌 General'}</span>
+                        {a.suggested_due_days && (
+                          <span>📅 Due in {a.suggested_due_days} day{a.suggested_due_days !== 1 ? 's' : ''}</span>
+                        )}
+                      </div>
+                    </div>
                   )}
+
+                  {/* Actions */}
+                  <div className="gmail-email-footer">
+                    {isConverted ? (
+                      <span className="gmail-task-badge">
+                        ✅ Task: "{converted[email.id].title}"
+                        <span className="gmail-task-priority" style={{ color: PRIORITY_COLORS[converted[email.id].priority] }}>
+                          {' '}· {converted[email.id].priority}
+                        </span>
+                      </span>
+                    ) : a ? (
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => convertToTask(email)}
+                        disabled={converting[email.id]}
+                      >
+                        {converting[email.id] ? 'Creating...' : '✅ Confirm Task'}
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => analyzeEmail(email)}
+                        disabled={analyzing[email.id]}
+                      >
+                        {analyzing[email.id] ? '🤖 Analyzing...' : '🤖 Analyze & Convert'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
 
-      {/* Empty state */}
       {status.connected && emails.length === 0 && !emailsLoading && !emailsError && (
-        <div className="empty-state">
-          <p>Click "Fetch Emails" to load your recent unread emails.</p>
-        </div>
+        <div className="empty-state"><p>Click "Fetch Emails" to load your recent unread emails.</p></div>
       )}
     </div>
   )

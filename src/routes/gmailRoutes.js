@@ -6,6 +6,7 @@ const {
   handleCallback,
   getStatus,
   getEmails,
+  analyzeEmail,
   emailToTask,
   disconnect,
 } = require('../controllers/gmailController');
@@ -22,7 +23,10 @@ router.get('/status', protect, getStatus);
 // GET  /api/gmail/emails       — list recent emails (protected)
 router.get('/emails', protect, getEmails);
 
-// POST /api/gmail/emails/to-task — convert email to task (protected)
+// POST /api/gmail/emails/analyze  — AI analysis before task creation
+router.post('/emails/analyze', protect, analyzeEmail);
+
+// POST /api/gmail/emails/to-task   — convert email to task (with optional AI data)
 router.post('/emails/to-task', protect, emailToTask);
 
 // DELETE /api/gmail/disconnect — remove Gmail connection (protected)

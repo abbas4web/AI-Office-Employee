@@ -1250,3 +1250,60 @@ body {
   font-size: 0.82rem;
   font-weight: 600;
 }
+
+.gmail-task-priority { font-weight: 700; }
+
+/* AI Analysis Panel */
+.gmail-analysis-panel {
+  background: linear-gradient(135deg, #f8f9ff, #f0f4ff);
+  border: 1px solid #dde3f8;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.gmail-analysis-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #3c4a6e;
+}
+
+.gmail-priority-badge {
+  padding: 0.15rem 0.55rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.gmail-urgent-badge {
+  background: #fde8e8;
+  color: #c0392b;
+  padding: 0.15rem 0.55rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.gmail-analysis-title {
+  font-size: 0.9rem;
+  color: #2c3e50;
+  margin-bottom: 0.35rem;
+}
+
+.gmail-analysis-summary {
+  font-size: 0.85rem;
+  color: #555;
+  font-style: italic;
+  margin-bottom: 0.5rem;
+}
+
+.gmail-analysis-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: #7f8c8d;
+}

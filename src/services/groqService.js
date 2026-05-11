@@ -123,4 +123,39 @@ Return ONLY a valid JSON object (no markdown, no explanation):
   return JSON.parse(response.choices[0].message.content);
 };
 
-module.exports = { sendPromptWithContext, getTaskSummaryJSON, getProductivitySuggestions };
+/**
+ * Analyze an email using Groq and return structured task metadata.
+ * Used before creating a task from Gmail to auto-set title, priority etc.
+ *
+ * @param {object} email - { sender_name, sender_email, subject, snippet }
+ * @returns {object} { task_title, priority, is_urgent, category, summary }
+ */
+const getEmailAnalysis = async (email) => {
+  const prompt = `You are an office task manager AI. Analyze this email and extract task information.
+
+EMAIL:
+From: ${email.sender_name} <${email.sender_email}>
+Subject: ${email.subject}
+Preview: ${email.snippet}
+
+Return ONLY a valid JSON object (no markdown):
+{
+  "task_title": "<concise action-oriented task title, max 80 chars>",
+  "priority": "<low|medium|high|urgent>",
+  "is_urgent": <true|false>,
+  "category": "<one of: client_request|bug_report|meeting|invoice|follow_up|review|general>",
+  "summary": "<1 sentence describing what needs to be done>",
+  "suggested_due_days": <number of days from today when this should be done, or null>
+}`;
+
+  const response = await groq.chat.completions.create({
+    model: 'llama-3.1-8b-instant',
+    response_format: { type: 'json_object' },
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.2,
+  });
+
+  return JSON.parse(response.choices[0].message.content);
+};
+
+module.exports = { sendPromptWithContext, getTaskSummaryJSON, getProductivitySuggestions, getEmailAnalysis };
