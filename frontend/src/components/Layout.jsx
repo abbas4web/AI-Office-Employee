@@ -25,6 +25,7 @@ export default function Layout() {
           <Link to="/clients">Clients</Link>
           <Link to="/reminders">Reminders</Link>
           <Link to="/activity">Activity</Link>
+          <Link to="/gmail">📧 Gmail</Link>
           {user.name && <span className="nav-user">👤 {user.name}</span>}
           <button onClick={handleLogout} className="logout-btn">
             Logout
