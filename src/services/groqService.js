@@ -5,9 +5,9 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 /**
  * Send a prompt to Groq and return the text reply.
  * @param {string} prompt
- * @param {string} model - defaults to fast llama3-8b
+ * @param {string} model - defaults to llama-3.1-8b-instant (fast & free)
  */
-const sendPrompt = async (prompt, model = 'llama3-8b-8192') => {
+const sendPrompt = async (prompt, model = 'llama-3.1-8b-instant') => {
   const response = await groq.chat.completions.create({
     model,
     messages: [
