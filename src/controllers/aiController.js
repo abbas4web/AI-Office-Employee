@@ -1,4 +1,4 @@
-const { sendPromptWithContext } = require('../services/groqService');
+const { sendPromptWithContext, getTaskSummaryJSON } = require('../services/groqService');
 const db = require('../db');
 
 /**
@@ -142,4 +142,64 @@ const askAI = async (req, res, next) => {
   }
 };
 
-module.exports = { askAI };
+/**
+ * POST /api/ai/task-summary
+ * Fetches all tasks from DB, identifies urgent/overdue work,
+ * and asks Groq to return a structured JSON daily summary.
+ */
+const taskSummary = async (req, res, next) => {
+  try {
+    const now = new Date();
+
+    // Fetch all tasks with assignee info
+    const result = await db.query(
+      `SELECT t.id, t.title, t.description, t.priority, t.status, t.due_date,
+              u.name AS assigned_to, c.name AS client_name
+       FROM tasks t
+       LEFT JOIN users u ON t.assigned_to = u.id
+       LEFT JOIN clients c ON t.client_id = c.id
+       ORDER BY t.due_date ASC NULLS LAST`,
+      []
+    );
+
+    const tasks = result.rows;
+
+    // Pre-classify tasks (gives Groq cleaner input)
+    const urgentTasks   = tasks.filter(t => t.priority === 'urgent' && t.status !== 'completed');
+    const overdueTasks  = tasks.filter(t => t.due_date && new Date(t.due_date) < now && t.status !== 'completed');
+    const pendingTasks  = tasks.filter(t => t.status === 'pending');
+    const inProgress    = tasks.filter(t => t.status === 'in_progress');
+    const completedTasks = tasks.filter(t => t.status === 'completed');
+
+    // Build compact task list for the prompt
+    const formatTask = (t) => ({
+      title: t.title,
+      priority: t.priority,
+      status: t.status,
+      due_date: t.due_date ? new Date(t.due_date).toISOString().split('T')[0] : null,
+      assigned_to: t.assigned_to || null,
+      client: t.client_name || null,
+      is_overdue: t.due_date ? new Date(t.due_date) < now : false,
+    });
+
+    const taskPayload = {
+      today: now.toISOString().split('T')[0],
+      stats: {
+        total: tasks.length,
+        urgent: urgentTasks.length,
+        overdue: overdueTasks.length,
+        pending: pendingTasks.length,
+        in_progress: inProgress.length,
+        completed: completedTasks.length,
+      },
+      all_tasks: tasks.map(formatTask),
+    };
+
+    const summaryJSON = await getTaskSummaryJSON(taskPayload);
+    res.json({ success: true, data: summaryJSON });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { askAI, taskSummary };

@@ -247,6 +247,7 @@ body {
 .quick-links {
   display: flex;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .quick-link {
@@ -262,6 +263,133 @@ body {
   background-color: #3498db;
   color: white;
 }
+
+/* ── AI Summary Section ─────────────────────────────────── */
+.ai-summary-section {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.ai-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.ai-summary-header h2 {
+  color: #2c3e50;
+  font-size: 1.25rem;
+}
+
+.ai-summary-card {
+  border: 1px solid #e8eaf6;
+  border-radius: 10px;
+  padding: 1.5rem;
+  background: #fafbff;
+}
+
+.ai-summary-text {
+  color: #34495e;
+  font-size: 1rem;
+  line-height: 1.7;
+  margin-bottom: 1.25rem;
+}
+
+.ai-summary-stats {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.ai-stat {
+  padding: 0.35rem 0.85rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ai-stat.urgent   { background: #fde8e8; color: #c0392b; }
+.ai-stat.overdue  { background: #fff3e0; color: #e65100; }
+.ai-stat.pending  { background: #e3f2fd; color: #1565c0; }
+.ai-stat.progress { background: #e8f5e9; color: #2e7d32; }
+.ai-stat.done     { background: #f3e5f5; color: #6a1b9a; }
+
+.ai-summary-block {
+  margin-bottom: 1.25rem;
+}
+
+.ai-summary-block h4 {
+  color: #2c3e50;
+  font-size: 0.95rem;
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #eee;
+}
+
+.ai-summary-block ul,
+.ai-summary-block ol {
+  padding-left: 1.5rem;
+}
+
+.ai-summary-block li {
+  margin-bottom: 0.4rem;
+  font-size: 0.92rem;
+  color: #444;
+}
+
+.due-chip {
+  background: #fff3e0;
+  color: #e65100;
+  padding: 0.1rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  margin-left: 0.4rem;
+}
+
+.overdue-chip {
+  background: #fdecea;
+  color: #c0392b;
+  padding: 0.1rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  margin-left: 0.4rem;
+}
+
+.task-reason {
+  color: #7f8c8d;
+  font-size: 0.82rem;
+  margin: 0.2rem 0 0.4rem 0;
+  font-style: italic;
+}
+
+.ai-recommendation {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  background: linear-gradient(135deg, #667eea22, #764ba222);
+  border: 1px solid #667eea44;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.ai-recommendation span {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.ai-recommendation p {
+  color: #2c3e50;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
 
 /* Page Header */
 .page-header {
