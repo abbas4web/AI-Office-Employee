@@ -1307,3 +1307,42 @@ body {
   font-size: 0.8rem;
   color: #7f8c8d;
 }
+
+/* ── Team Management Page ──────────────────────────────── */
+.team-page { max-width: 1100px; }
+
+.team-stats { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+.team-stat-card { background: white; border-radius: 10px; padding: 1rem 1.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.07); display: flex; flex-direction: column; align-items: center; gap: 0.25rem; min-width: 100px; flex: 1; }
+.team-stat-card.admin    { border-top: 3px solid #c0392b; }
+.team-stat-card.manager  { border-top: 3px solid #e65100; }
+.team-stat-card.employee { border-top: 3px solid #2e7d32; }
+.team-stat-num { font-size: 2rem; font-weight: 700; color: #2c3e50; line-height: 1; }
+.team-stat-card span:last-child { font-size: 0.82rem; color: #7f8c8d; }
+
+.team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.25rem; }
+
+.team-card { background: white; border-radius: 12px; padding: 1.5rem 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; transition: box-shadow 0.2s, transform 0.2s; }
+.team-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.12); transform: translateY(-2px); }
+.team-card-me { border: 2px solid #667eea; }
+
+.team-you-badge { position: absolute; top: 0.75rem; right: 0.75rem; background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 10px; text-transform: uppercase; }
+
+.team-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 1.6rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 0.75rem; box-shadow: 0 4px 12px rgba(102,126,234,0.35); }
+
+.team-name { font-size: 1rem; font-weight: 700; color: #2c3e50; margin-bottom: 0.2rem; }
+.team-email { font-size: 0.8rem; color: #7f8c8d; margin-bottom: 0.75rem; word-break: break-all; }
+.team-role-badge { padding: 0.3rem 0.9rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem; }
+.team-joined { font-size: 0.75rem; color: #b2bec3; margin-bottom: 1rem; }
+.team-card-actions { display: flex; gap: 0.5rem; width: 100%; justify-content: center; }
+.team-admin-note { text-align: center; color: #7f8c8d; margin-top: 2rem; font-size: 0.9rem; }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+.modal-box { background: white; border-radius: 14px; padding: 2rem; width: 100%; max-width: 460px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); animation: modalIn 0.25s ease; }
+.modal-sm { max-width: 360px; }
+@keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(-10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+.modal-header h2 { color: #2c3e50; font-size: 1.1rem; }
+.modal-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #7f8c8d; padding: 0.25rem 0.5rem; border-radius: 4px; }
+.modal-close:hover { background: #f0f0f0; }
+.modal-form { display: flex; flex-direction: column; gap: 1rem; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem; }

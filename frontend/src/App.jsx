@@ -7,6 +7,7 @@ import Clients from "./pages/Clients";
 import Reminders from "./pages/Reminders";
 import Activity from "./pages/Activity";
 import Gmail from "./pages/Gmail";
+import Team from "./pages/Team";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -30,6 +31,7 @@ function App() {
         <Route path="reminders" element={<Reminders />} />
         <Route path="activity" element={<Activity />} />
         <Route path="gmail" element={<Gmail />} />
+        <Route path="team" element={<Team />} />
       </Route>
     </Routes>
   );
