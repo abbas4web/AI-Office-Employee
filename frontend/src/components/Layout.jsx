@@ -1,11 +1,25 @@
 import { Outlet, Link, useNavigate } from "react-router-dom";
 import AiChat from "./AiChat";
 
+// Decode JWT payload without a library (base64 decode middle part)
+function getRoleFromToken() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.role || null;
+  } catch { return null; }
+}
+
 export default function Layout() {
   const navigate = useNavigate();
 
-  // Get logged-in user name from localStorage
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  // Always read role from JWT token — more reliable than localStorage user object
+  const role         = getRoleFromToken() || user.role || 'employee';
+  const isPrivileged = role === 'admin' || role === 'manager';
+  const isAdmin      = role === 'admin';
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -25,8 +39,13 @@ export default function Layout() {
           <Link to="/clients">Clients</Link>
           <Link to="/reminders">Reminders</Link>
           <Link to="/activity">Activity</Link>
-          <Link to="/gmail">📧 Gmail</Link>
-          <Link to="/team">👥 Team</Link>
+
+          {/* Gmail — admin & manager only */}
+          {isPrivileged && <Link to="/gmail">📧 Gmail</Link>}
+
+          {/* Team — admin & manager only */}
+          {isPrivileged && <Link to="/team">👥 Team</Link>}
+
           {user.name && <span className="nav-user">👤 {user.name}</span>}
           <button onClick={handleLogout} className="logout-btn">
             Logout

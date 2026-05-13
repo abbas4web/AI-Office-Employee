@@ -28,8 +28,9 @@ export default function Team() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting]         = useState(false)
 
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
-  const isAdmin = currentUser.role === 'admin'
+  const currentUser  = JSON.parse(localStorage.getItem('user') || '{}')
+  const isAdmin      = currentUser.role === 'admin'
+  const isPrivileged = currentUser.role === 'admin' || currentUser.role === 'manager'
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3500) }
 
@@ -154,7 +155,10 @@ export default function Team() {
 
                 {/* Info */}
                 <h3 className="team-name">{emp.name}</h3>
-                <p className="team-email">{emp.email}</p>
+                {isPrivileged
+                  ? <p className="team-email">{emp.email}</p>
+                  : <p className="team-email" style={{ letterSpacing: '0.1em', opacity: 0.5 }}>••••@••••.com</p>
+                }
 
                 {/* Role Badge */}
                 <span
