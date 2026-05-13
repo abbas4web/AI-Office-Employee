@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, CheckSquare, Users, Bell, Activity,
-  Mail, UserCog, LogOut, Menu, X, Bot, ChevronRight, Building2
+  Mail, UserCog, LogOut, PanelLeftClose, PanelLeftOpen, Bot, Building2, ChevronRight
 } from "lucide-react";
 import AiChat from "./AiChat";
 
@@ -17,7 +17,7 @@ function getRoleFromToken() {
 
 export default function Layout() {
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const role = getRoleFromToken() || user.role || 'employee';
@@ -30,73 +30,86 @@ export default function Layout() {
   };
 
   const navItems = [
-    { to: "/dashboard", label: "Dashboard",  Icon: LayoutDashboard, show: true },
-    { to: "/tasks",     label: "Tasks",       Icon: CheckSquare,     show: true },
-    { to: "/clients",   label: "Clients",     Icon: Building2,       show: true },
-    { to: "/reminders", label: "Reminders",   Icon: Bell,            show: true },
-    { to: "/activity",  label: "Activity",    Icon: Activity,        show: true },
-    { to: "/gmail",     label: "Gmail",       Icon: Mail,            show: isPrivileged },
-    { to: "/team",      label: "Team",        Icon: UserCog,         show: true },
+    { to: "/dashboard", label: "Dashboard",  Icon: LayoutDashboard },
+    { to: "/tasks",     label: "Tasks",       Icon: CheckSquare     },
+    { to: "/clients",   label: "Clients",     Icon: Building2       },
+    { to: "/reminders", label: "Reminders",   Icon: Bell            },
+    { to: "/activity",  label: "Activity",    Icon: Activity        },
+    ...(isPrivileged ? [{ to: "/gmail", label: "Gmail", Icon: Mail }] : []),
+    { to: "/team",      label: "Team",        Icon: UserCog         },
   ];
 
   const roleLabel = { admin: 'Administrator', manager: 'Manager', employee: 'Employee' }[role] || role;
   const initials = user.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
 
   return (
-    <div className={`app-shell ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+    <div className="app-shell">
+      {/* ── Sidebar ── */}
+      <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
 
-      {/* ── Sidebar ─────────────────────────────── */}
-      <aside className="sidebar">
-        {/* Logo */}
+        {/* Logo row */}
         <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">
-            <Bot size={22} />
-          </div>
-          {sidebarOpen && (
+          <div className="sidebar-logo-icon"><Bot size={20} /></div>
+          {!collapsed && (
             <div className="sidebar-logo-text">
               <span className="sidebar-app-name">AI Office</span>
               <span className="sidebar-app-sub">Employee Portal</span>
             </div>
           )}
-          <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
         </div>
 
-        {/* Nav */}
+        {/* Nav items */}
         <nav className="sidebar-nav">
-          {navItems.filter(i => i.show).map(({ to, label, Icon }) => (
+          {navItems.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
               to={to}
-              className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+              title={collapsed ? label : undefined}
+              className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}
             >
-              <Icon size={20} className="sidebar-icon" />
-              {sidebarOpen && <span className="sidebar-label">{label}</span>}
-              {sidebarOpen && <ChevronRight size={14} className="sidebar-chevron" />}
+              <Icon size={19} className="sidebar-icon" />
+              {!collapsed && <span className="sidebar-label">{label}</span>}
+              {!collapsed && <ChevronRight size={13} className="sidebar-chevron" />}
             </NavLink>
           ))}
         </nav>
 
-        {/* User profile at bottom */}
+        {/* Footer: avatar + logout */}
         <div className="sidebar-footer">
-          <div className="sidebar-user">
+          <div className="sidebar-user" title={collapsed ? user.name : undefined}>
             <div className="sidebar-avatar">{initials}</div>
-            {sidebarOpen && (
+            {!collapsed && (
               <div className="sidebar-user-info">
                 <span className="sidebar-user-name">{user.name || 'User'}</span>
                 <span className="sidebar-user-role">{roleLabel}</span>
               </div>
             )}
           </div>
-          <button className="sidebar-logout" onClick={handleLogout} title="Logout">
-            <LogOut size={18} />
-          </button>
+          {!collapsed && (
+            <button className="sidebar-logout" onClick={handleLogout} title="Logout">
+              <LogOut size={17} />
+            </button>
+          )}
+          {collapsed && (
+            <button className="sidebar-logout" onClick={handleLogout} title="Logout" style={{margin:'0 auto'}}>
+              <LogOut size={17} />
+            </button>
+          )}
         </div>
       </aside>
 
-      {/* ── Main Content ─────────────────────────── */}
-      <div className="main-wrapper">
+      {/* ── Floating toggle button — always visible ── */}
+      <button
+        className="sidebar-float-toggle"
+        onClick={() => setCollapsed(c => !c)}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        style={{ left: collapsed ? '58px' : '246px' }}
+      >
+        {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+      </button>
+
+      {/* ── Main ── */}
+      <div className={`main-wrapper${collapsed ? ' main-wrapper--collapsed' : ''}`}>
         <main className="main-content">
           <Outlet />
         </main>

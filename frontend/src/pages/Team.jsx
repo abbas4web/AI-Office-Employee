@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { API_URL, authHeader } from '../api'
+import { UserCog, UserPlus, Crown, Briefcase, User, Pencil, Trash2, RefreshCw, Lock } from 'lucide-react'
 
 const ROLE_COLORS = {
   admin:    { bg: '#fde8e8', color: '#c0392b' },
@@ -7,7 +8,7 @@ const ROLE_COLORS = {
   employee: { bg: '#e8f5e9', color: '#2e7d32' },
 }
 
-const ROLE_ICONS = { admin: '👑', manager: '🏢', employee: '👤' }
+const ROLE_ICONS = { admin: <Crown size={13}/>, manager: <Briefcase size={13}/>, employee: <User size={13}/> }
 
 const initForm = { name: '', email: '', password: '', role: 'employee' }
 
@@ -128,20 +129,18 @@ export default function Team() {
 
       {/* Header */}
       <div className="page-header">
-        <h1>👥 Team Management</h1>
+        <h1 style={{display:'flex',alignItems:'center',gap:'0.5rem'}}><UserCog size={22}/>Team Management</h1>
         {isPrivileged && (
-          <button className="btn btn-primary" onClick={openAdd}>
-            ➕ Add Employee
-          </button>
+          <button className="btn btn-primary" onClick={openAdd}><UserPlus size={15}/>Add Employee</button>
         )}
       </div>
 
       {/* Stats */}
       <div className="team-stats">
         <div className="team-stat-card"><span className="team-stat-num">{stats.total}</span><span>Total</span></div>
-        <div className="team-stat-card admin"><span className="team-stat-num">{stats.admins}</span><span>👑 Admins</span></div>
-        <div className="team-stat-card manager"><span className="team-stat-num">{stats.managers}</span><span>🏢 Managers</span></div>
-        <div className="team-stat-card employee"><span className="team-stat-num">{stats.employees}</span><span>👤 Employees</span></div>
+        <div className="team-stat-card admin"><span className="team-stat-num">{stats.admins}</span><span style={{display:'flex',alignItems:'center',gap:'4px'}}><Crown size={12}/>Admins</span></div>
+        <div className="team-stat-card manager"><span className="team-stat-num">{stats.managers}</span><span style={{display:'flex',alignItems:'center',gap:'4px'}}><Briefcase size={12}/>Managers</span></div>
+        <div className="team-stat-card employee"><span className="team-stat-num">{stats.employees}</span><span style={{display:'flex',alignItems:'center',gap:'4px'}}><User size={12}/>Employees</span></div>
       </div>
 
       {error && <div className="error-banner">{error}</div>}
@@ -185,14 +184,8 @@ export default function Team() {
                 {/* Actions — admin & manager only */}
                 {isPrivileged && (
                   <div className="team-card-actions">
-                    <button className="btn btn-secondary btn-sm" onClick={() => openEdit(emp)}>
-                      ✏️ Edit
-                    </button>
-                    {!isMe && (
-                      <button className="btn btn-danger btn-sm" onClick={() => setDeleteTarget(emp)}>
-                        🗑 Remove
-                      </button>
-                    )}
+                    <button className="btn btn-secondary btn-sm" onClick={() => openEdit(emp)}><Pencil size={13}/>Edit</button>
+                    {!isMe && <button className="btn btn-danger btn-sm" onClick={() => setDeleteTarget(emp)}><Trash2 size={13}/>Remove</button>}
                   </div>
                 )}
               </div>
@@ -202,8 +195,8 @@ export default function Team() {
       )}
 
       {!isPrivileged && (
-        <p className="team-admin-note">
-          🔒 Only admins and managers can add, edit, or remove employees.
+        <p className="team-admin-note" style={{display:'flex',alignItems:'center',gap:'0.4rem',justifyContent:'center'}}>
+          <Lock size={14}/>Only admins and managers can add, edit, or remove employees.
         </p>
       )}
 

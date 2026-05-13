@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { API_URL, authHeader } from "../api";
+import { RefreshCw, Plus, Pencil, Trash2 } from "lucide-react";
 
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -189,10 +190,10 @@ export default function Tasks() {
             <option value="urgent">Urgent</option>
           </select>
           <button className="btn btn-secondary" onClick={fetchTasks} disabled={loading}>
-            {loading ? 'Loading...' : 'Refresh'}
+            <RefreshCw size={15} />{loading ? 'Loading...' : 'Refresh'}
           </button>
           <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            Add Task
+            <Plus size={15} />Add Task
           </button>
         </div>
       </div>
@@ -251,8 +252,8 @@ export default function Tasks() {
                   {task.due_date ? new Date(task.due_date).toLocaleDateString() : "-"}
                 </td>
                 <td>
-                  <button className="btn btn-small" onClick={() => handleEdit(task)}>Edit</button>
-                  <button className="btn btn-small btn-danger" onClick={() => handleDelete(task.id)}>Delete</button>
+                  <button className="btn btn-small" onClick={() => handleEdit(task)}><Pencil size={13} />Edit</button>
+                  <button className="btn btn-small btn-danger" onClick={() => handleDelete(task.id)}><Trash2 size={13} />Delete</button>
                 </td>
               </tr>
             ))}

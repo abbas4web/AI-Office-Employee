@@ -1,15 +1,16 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { API_URL, authHeader } from '../api'
+import { Mail, WifiOff, Wifi, RefreshCw, Inbox, Bot, CheckCircle2, Trash2, AlertTriangle, Clock, Tag, Sparkles } from 'lucide-react'
 
 const CATEGORY_LABELS = {
-  client_request: '👤 Client Request',
-  bug_report: '🐛 Bug Report',
-  meeting: '📅 Meeting',
-  invoice: '💰 Invoice',
-  follow_up: '🔁 Follow-up',
-  review: '👁 Review',
-  general: '📌 General',
+  client_request: 'Client Request',
+  bug_report:     'Bug Report',
+  meeting:        'Meeting',
+  invoice:        'Invoice',
+  follow_up:      'Follow-up',
+  review:         'Review',
+  general:        'General',
 }
 
 const PRIORITY_COLORS = {
@@ -125,7 +126,7 @@ export default function Gmail() {
       {toast && <div className="gmail-toast">{toast}</div>}
 
       <div className="page-header">
-        <h1>📧 Gmail Integration</h1>
+        <h1 style={{display:'flex',alignItems:'center',gap:'0.5rem'}}><Mail size={22}/>Gmail Integration</h1>
       </div>
 
       {/* Connection Card */}
@@ -143,17 +144,17 @@ export default function Gmail() {
             </div>
             <div className="gmail-connect-actions">
               <button className="btn btn-primary" onClick={fetchEmails} disabled={emailsLoading}>
-                {emailsLoading ? 'Loading...' : '📥 Fetch Emails'}
+                <Inbox size={15}/>{emailsLoading ? 'Loading...' : 'Fetch Emails'}
               </button>
-              <button className="btn btn-danger" onClick={disconnectGmail}>Disconnect</button>
+              <button className="btn btn-danger" onClick={disconnectGmail}><Trash2 size={15}/>Disconnect</button>
             </div>
           </div>
         ) : (
           <div className="gmail-disconnected">
-            <div className="gmail-connect-icon">📧</div>
+            <div className="gmail-connect-icon"><Mail size={40} strokeWidth={1.2}/></div>
             <h3>Connect Your Gmail</h3>
             <p>Read emails and convert them into tasks with AI-powered analysis.</p>
-            <button className="btn btn-primary btn-lg" onClick={connectGmail}>🔗 Connect Gmail</button>
+            <button className="btn btn-primary btn-lg" onClick={connectGmail}><Wifi size={16}/>Connect Gmail</button>
           </div>
         )}
       </div>
@@ -179,7 +180,7 @@ export default function Gmail() {
       {emails.length > 0 && (
         <div className="gmail-emails-section">
           <div className="page-header" style={{ marginBottom: '1rem' }}>
-            <h2>📥 Recent Emails ({emails.length})</h2>
+            <h2 style={{display:'flex',alignItems:'center',gap:'0.5rem'}}><Inbox size={18}/>Recent Emails ({emails.length})</h2>
             <button className="btn btn-secondary" onClick={fetchEmails} disabled={emailsLoading}>Refresh</button>
           </div>
 
@@ -208,21 +209,25 @@ export default function Gmail() {
                   {a && !isConverted && (
                     <div className="gmail-analysis-panel">
                       <div className="gmail-analysis-header">
-                        <span>🤖 AI Analysis</span>
+                        <span style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><Bot size={15}/>AI Analysis</span>
                         <span
                           className="gmail-priority-badge"
                           style={{ background: PRIORITY_COLORS[a.priority] + '22', color: PRIORITY_COLORS[a.priority] }}
                         >
                           {a.priority?.toUpperCase()}
                         </span>
-                        {a.is_urgent && <span className="gmail-urgent-badge">🔴 URGENT</span>}
+                        {a.is_urgent && <span className="gmail-urgent-badge"><AlertCircle size={14}/> URGENT</span>}
                       </div>
                       <p className="gmail-analysis-title">📋 <strong>Task:</strong> {a.task_title}</p>
                       <p className="gmail-analysis-summary">💡 {a.summary}</p>
                       <div className="gmail-analysis-meta">
-                        <span>{CATEGORY_LABELS[a.category] || '📌 General'}</span>
+                        <span style={{display:'flex',alignItems:'center',gap:'0.4rem'}}>
+                          <Tag size={13}/>{CATEGORY_LABELS[a.category] || 'General'}
+                        </span>
                         {a.suggested_due_days && (
-                          <span>📅 Due in {a.suggested_due_days} day{a.suggested_due_days !== 1 ? 's' : ''}</span>
+                          <span style={{display:'flex',alignItems:'center',gap:'0.4rem'}}>
+                            <Clock size={13}/>Due in {a.suggested_due_days} day{a.suggested_due_days !== 1 ? 's' : ''}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -238,20 +243,12 @@ export default function Gmail() {
                         </span>
                       </span>
                     ) : a ? (
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => convertToTask(email)}
-                        disabled={converting[email.id]}
-                      >
-                        {converting[email.id] ? 'Creating...' : '✅ Confirm Task'}
+                      <button className="btn btn-primary btn-sm" onClick={() => convertToTask(email)} disabled={converting[email.id]}>
+                        <CheckCircle2 size={14}/>{converting[email.id] ? 'Creating...' : 'Confirm Task'}
                       </button>
                     ) : (
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => analyzeEmail(email)}
-                        disabled={analyzing[email.id]}
-                      >
-                        {analyzing[email.id] ? '🤖 Analyzing...' : '🤖 Analyze & Convert'}
+                      <button className="btn btn-secondary btn-sm" onClick={() => analyzeEmail(email)} disabled={analyzing[email.id]}>
+                        <Sparkles size={14}/>{analyzing[email.id] ? 'Analyzing...' : 'Analyze & Convert'}
                       </button>
                     )}
                   </div>
