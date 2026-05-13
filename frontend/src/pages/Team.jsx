@@ -29,8 +29,18 @@ export default function Team() {
   const [deleting, setDeleting]         = useState(false)
 
   const currentUser  = JSON.parse(localStorage.getItem('user') || '{}')
-  const isAdmin      = currentUser.role === 'admin'
-  const isPrivileged = currentUser.role === 'admin' || currentUser.role === 'manager'
+
+  // Read role from JWT token (always fresh) with localStorage fallback
+  const getRole = () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return currentUser.role || 'employee'
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      return payload.role || currentUser.role || 'employee'
+    } catch { return currentUser.role || 'employee' }
+  }
+  const myRole       = getRole()
+  const isPrivileged = myRole === 'admin' || myRole === 'manager'
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3500) }
 
@@ -119,7 +129,7 @@ export default function Team() {
       {/* Header */}
       <div className="page-header">
         <h1>👥 Team Management</h1>
-        {isAdmin && (
+        {isPrivileged && (
           <button className="btn btn-primary" onClick={openAdd}>
             ➕ Add Employee
           </button>
@@ -172,8 +182,8 @@ export default function Team() {
                   Joined {new Date(emp.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
                 </p>
 
-                {/* Actions (admin only) */}
-                {isAdmin && (
+                {/* Actions — admin & manager only */}
+                {isPrivileged && (
                   <div className="team-card-actions">
                     <button className="btn btn-secondary btn-sm" onClick={() => openEdit(emp)}>
                       ✏️ Edit
@@ -191,9 +201,9 @@ export default function Team() {
         </div>
       )}
 
-      {!isAdmin && (
+      {!isPrivileged && (
         <p className="team-admin-note">
-          🔒 Only admins can add, edit, or remove employees.
+          🔒 Only admins and managers can add, edit, or remove employees.
         </p>
       )}
 

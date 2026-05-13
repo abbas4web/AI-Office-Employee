@@ -43,8 +43,8 @@ export default function Layout() {
           {/* Gmail — admin & manager only */}
           {isPrivileged && <Link to="/gmail">📧 Gmail</Link>}
 
-          {/* Team — admin & manager only */}
-          {isPrivileged && <Link to="/team">👥 Team</Link>}
+          {/* Team — ALL users can view */}
+          <Link to="/team">👥 Team</Link>
 
           {user.name && <span className="nav-user">👤 {user.name}</span>}
           <button onClick={handleLogout} className="logout-btn">
