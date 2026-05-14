@@ -207,7 +207,11 @@ export default function Gmail() {
                         <span className="gmail-email-addr">{email.sender_email}</span>
                       </div>
                     </div>
-                    <span className="gmail-date">{new Date(email.date).toLocaleDateString()}</span>
+                    <span className="gmail-date">{(() => {
+                      const d = new Date(email.date);
+                      if (isNaN(d.getTime())) return "-";
+                      return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+                    })()}</span>
                   </div>
 
                   <p className="gmail-subject">{email.subject}</p>

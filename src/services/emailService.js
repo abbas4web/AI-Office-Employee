@@ -59,6 +59,16 @@ const taskCompletionTemplate = ({ taskTitle, assigneeName, completedAt, notes })
   `,
 });
 
+const formatDateDDMMYYYY = (val) => {
+  if (!val) return "";
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return val;
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
 const reminderTemplate = ({ reminderTitle, message, taskTitle, dueDate }) => ({
   subject: `🔔 Reminder: ${reminderTitle}`,
   html: `
@@ -75,7 +85,7 @@ const reminderTemplate = ({ reminderTitle, message, taskTitle, dueDate }) => ({
         ${taskTitle ? `
         <div style="padding: 14px 18px; background: #fefce8; border-left: 4px solid #f59e0b; border-radius: 6px; margin-bottom: 16px;">
           <p style="margin: 0; color: #92400e; font-size: 14px;"><strong>Related Task:</strong> ${taskTitle}</p>
-          ${dueDate ? `<p style="margin: 6px 0 0; color: #92400e; font-size: 13px;"><strong>Due:</strong> ${new Date(dueDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>` : ''}
+          ${dueDate ? `<p style="margin: 6px 0 0; color: #92400e; font-size: 13px;"><strong>Due:</strong> ${formatDateDDMMYYYY(dueDate)}</p>` : ''}
         </div>` : ''}
 
         <p style="color: #64748b; font-size: 13px; margin: 0;">Please log in to the portal to take action on this reminder.</p>

@@ -323,7 +323,12 @@ export default function Tasks() {
       headerName: "Due Date", 
       flex: 0.8,
       minWidth: 100,
-      valueFormatter: p => p.value ? new Date(p.value).toLocaleDateString() : "-"
+      valueFormatter: p => {
+        if (!p.value) return "-";
+        const d = new Date(p.value);
+        if (isNaN(d.getTime())) return "-";
+        return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+      }
     },
     {
       headerName: "Actions",

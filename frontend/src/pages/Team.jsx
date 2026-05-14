@@ -179,7 +179,11 @@ export default function Team() {
                 </span>
 
                 <p className="team-joined">
-                  Joined {new Date(emp.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
+                  Joined {(() => {
+                    const d = new Date(emp.created_at);
+                    if (isNaN(d.getTime())) return "-";
+                    return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+                  })()}
                 </p>
 
                 {/* Actions — admin & manager only */}

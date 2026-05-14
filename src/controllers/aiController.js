@@ -77,7 +77,11 @@ const askAI = async (req, res, next) => {
         context += ` | Status: ${t.status}`;
         if (t.assigned_to)  context += ` | Assigned to: ${t.assigned_to}`;
         if (t.client_name)  context += ` | Client: ${t.client_name}`;
-        if (t.due_date)     context += ` | Due: ${new Date(t.due_date).toLocaleDateString('en-IN')}`;
+        if (t.due_date) {
+          const d = new Date(t.due_date);
+          const formatted = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+          context += ` | Due: ${formatted}`;
+        }
         context += '\n';
       });
     } else {
