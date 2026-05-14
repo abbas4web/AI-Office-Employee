@@ -158,4 +158,36 @@ Return ONLY a valid JSON object (no markdown):
   return JSON.parse(response.choices[0].message.content);
 };
 
-module.exports = { sendPromptWithContext, getTaskSummaryJSON, getProductivitySuggestions, getEmailAnalysis };
+/**
+ * Generate customized task completion emails for both the client and the employee.
+ * 
+ * @param {object} taskData - { title, description, clientName, employeeName }
+ * @returns {object} { client_email_body, employee_email_body }
+ */
+const generateCompletionEmails = async (taskData) => {
+  const prompt = `You are an AI assistant for a professional office portal. A task has just been completed.
+Write two short, professional email messages based on this task data:
+
+TASK DETAILS:
+Title: ${taskData.title}
+Description: ${taskData.description || 'No description provided'}
+Client Name: ${taskData.clientName || 'Valued Client'}
+Employee Name: ${taskData.employeeName || 'Our Team'}
+
+Return ONLY a valid JSON object (no markdown):
+{
+  "client_email_body": "<Write a 2-3 sentence professional message to the client informing them their task is completed.>",
+  "employee_email_body": "<Write a 2-3 sentence encouraging message to the employee congratulating them on finishing the task and telling them to wait for the next assignment.>"
+}`;
+
+  const response = await groq.chat.completions.create({
+    model: 'llama-3.1-8b-instant',
+    response_format: { type: 'json_object' },
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.4,
+  });
+
+  return JSON.parse(response.choices[0].message.content);
+};
+
+module.exports = { sendPromptWithContext, getTaskSummaryJSON, getProductivitySuggestions, getEmailAnalysis, generateCompletionEmails };

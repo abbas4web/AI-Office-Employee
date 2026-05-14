@@ -1,5 +1,8 @@
 const taskService = require('../services/taskService');
 const { logActivity } = require('../services/activityService');
+const { generateCompletionEmails } = require('../services/groqService');
+const { sendAITaskCompletionEmails } = require('../services/emailService');
+const db = require('../db');
 
 /**
  * GET /tasks
@@ -100,6 +103,48 @@ const updateTask = async (req, res, next) => {
       status: task.status,
       previous_status: existingTask.status,
     });
+
+    // --- AI Auto Email Logic ---
+    // If status changed to 'completed', send AI emails in the background
+    if (status === 'completed' && existingTask.status !== 'completed') {
+      // Fetch rich details for AI context
+      db.query(`
+        SELECT t.title, t.description, 
+               u.name AS employee_name, u.email AS employee_email,
+               c.name AS client_name, c.email AS client_email
+        FROM tasks t
+        LEFT JOIN users u ON t.assigned_to = u.id
+        LEFT JOIN clients c ON t.client_id = c.id
+        WHERE t.id = $1
+      `, [task.id]).then(async (result) => {
+        if (result.rows.length > 0) {
+          const tInfo = result.rows[0];
+          const hasClientEmail = !!tInfo.client_email;
+          const hasEmployeeEmail = !!tInfo.employee_email;
+          
+          if (hasClientEmail || hasEmployeeEmail) {
+            try {
+              console.log(`Generating AI completion emails for task ${task.id}...`);
+              const aiEmails = await generateCompletionEmails({
+                title: tInfo.title,
+                description: tInfo.description,
+                clientName: tInfo.client_name,
+                employeeName: tInfo.employee_name
+              });
+              
+              await sendAITaskCompletionEmails(
+                hasClientEmail ? tInfo.client_email : null,
+                hasEmployeeEmail ? tInfo.employee_email : null,
+                aiEmails
+              );
+              console.log(`✅ AI emails sent successfully for task ${task.id}`);
+            } catch (aiErr) {
+              console.error(`❌ Failed to send AI completion emails for task ${task.id}:`, aiErr);
+            }
+          }
+        }
+      }).catch(err => console.error("Error fetching task details for email:", err));
+    }
 
     res.json({ success: true, data: task });
   } catch (err) {

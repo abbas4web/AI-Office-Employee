@@ -15,14 +15,6 @@ export default function Tasks() {
   const [error, setError] = useState('');
   const [formError, setFormError] = useState('');
 
-  // Email Notification Modal State
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
-  const [emailRecipient, setEmailRecipient] = useState("plantiqx@gmail.com");
-  const [completedTaskId, setCompletedTaskId] = useState(null);
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailSuccessMsg, setEmailSuccessMsg] = useState('');
-  const [emailErrorMsg, setEmailErrorMsg] = useState('');
-
   const emptyForm = {
     title: "",
     description: "",
@@ -156,46 +148,16 @@ export default function Tasks() {
       });
       fetchTasks();
 
-      // If task is marked as completed, open the email popup instead of prompt
+      // If task is marked as completed, show toast that AI is sending emails
       if (newStatus === 'completed') {
-        setCompletedTaskId(id);
-        setEmailRecipient("plantiqx@gmail.com");
-        setEmailSuccessMsg('');
-        setEmailErrorMsg('');
-        setEmailModalOpen(true);
+        const toast = document.createElement('div');
+        toast.className = 'gmail-toast';
+        toast.innerHTML = '✨ Task completed! AI is generating and sending emails...';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
       }
     } catch {
       setError('Failed to update status.');
-    }
-  };
-
-  const handleSendEmail = async (e) => {
-    e.preventDefault();
-    if (!emailRecipient) {
-      setEmailModalOpen(false);
-      return;
-    }
-    setSendingEmail(true);
-    setEmailSuccessMsg('');
-    setEmailErrorMsg('');
-
-    try {
-      const res = await fetch(`${API_URL}/api/email/task-completion`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeader() },
-        body: JSON.stringify({ task_id: completedTaskId, recipient_email: emailRecipient }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setEmailSuccessMsg(`Email sent successfully to ${emailRecipient}`);
-        setTimeout(() => setEmailModalOpen(false), 2000); // Auto close after 2s on success
-      } else {
-        setEmailErrorMsg(data.message || 'Failed to send email.');
-      }
-    } catch {
-      setEmailErrorMsg('Cannot reach server.');
-    } finally {
-      setSendingEmail(false);
     }
   };
 
@@ -378,49 +340,6 @@ export default function Tasks() {
           </div>
         </form>
       </Drawer>
-
-      {/* Email Notification Popup */}
-      {emailModalOpen && (
-        <div className="modal-overlay" onClick={() => !sendingEmail && setEmailModalOpen(false)}>
-          <div className="modal-box modal-sm" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>📧 Send Notification</h2>
-              <button className="modal-close" onClick={() => setEmailModalOpen(false)} disabled={sendingEmail}>✕</button>
-            </div>
-            
-            <form onSubmit={handleSendEmail} className="modal-form">
-              <p style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '1rem', lineHeight: '1.5' }}>
-                Task marked as completed! Enter an email address to notify the client or manager. Leave blank to skip.
-              </p>
-
-              {emailSuccessMsg && <div className="gmail-toast" style={{ position:'static', transform:'none', marginBottom:'1rem', background:'#10b981' }}>✅ {emailSuccessMsg}</div>}
-              {emailErrorMsg && <div className="error-banner" style={{ marginBottom:'1rem' }}>❌ {emailErrorMsg}</div>}
-
-              <div className="form-group">
-                <label>Recipient Email</label>
-                <input 
-                  type="email" 
-                  value={emailRecipient} 
-                  onChange={e => setEmailRecipient(e.target.value)} 
-                  placeholder="name@example.com"
-                  disabled={sendingEmail || !!emailSuccessMsg}
-                />
-              </div>
-
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setEmailModalOpen(false)} disabled={sendingEmail}>
-                  {emailRecipient ? 'Cancel' : 'Skip'}
-                </button>
-                {emailRecipient && (
-                  <button type="submit" className="btn btn-primary" disabled={sendingEmail || !!emailSuccessMsg}>
-                    {sendingEmail ? 'Sending...' : 'Send Email'}
-                  </button>
-                )}
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

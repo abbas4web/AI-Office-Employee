@@ -128,4 +128,46 @@ const sendReminderEmail = async (to, reminderData) => {
   return { messageId: info.messageId, accepted: info.accepted };
 };
 
-module.exports = { sendTaskCompletionEmail, sendReminderEmail };
+/**
+ * Send AI-generated completion emails to the client and/or employee.
+ * @param {string} clientEmail 
+ * @param {string} employeeEmail 
+ * @param {object} aiContent - { client_email_body, employee_email_body }
+ */
+const sendAITaskCompletionEmails = async (clientEmail, employeeEmail, aiContent) => {
+  const transporter = createTransporter();
+  
+  const generateHTML = (title, bodyText) => `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; padding: 32px; border-radius: 12px; border: 1px solid #e2e8f0;">
+      <h2 style="color: #0f172a; font-size: 20px; margin: 0 0 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px;">${title}</h2>
+      <p style="color: #334155; font-size: 15px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${bodyText}</p>
+      <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+        <p style="color: #64748b; font-size: 13px; margin: 0;">AI Office Employee Portal</p>
+      </div>
+    </div>
+  `;
+
+  const promises = [];
+
+  if (clientEmail && aiContent.client_email_body) {
+    promises.push(transporter.sendMail({
+      from: `"AI Office Portal" <${process.env.SMTP_USER}>`,
+      to: clientEmail,
+      subject: `Task Update: Your task has been completed`,
+      html: generateHTML('Task Completed', aiContent.client_email_body),
+    }));
+  }
+
+  if (employeeEmail && aiContent.employee_email_body) {
+    promises.push(transporter.sendMail({
+      from: `"AI Office Portal" <${process.env.SMTP_USER}>`,
+      to: employeeEmail,
+      subject: `Great Job: Task completed`,
+      html: generateHTML('Task Completed successfully', aiContent.employee_email_body),
+    }));
+  }
+
+  await Promise.allSettled(promises);
+};
+
+module.exports = { sendTaskCompletionEmail, sendReminderEmail, sendAITaskCompletionEmails };
