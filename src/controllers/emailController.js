@@ -18,7 +18,7 @@ const notifyTaskCompletion = async (req, res, next) => {
 
     // Fetch task + assignee details from DB
     const result = await db.query(
-      `SELECT t.title, t.status, t.updated_at, u.name AS assignee_name
+      `SELECT t.title, t.status, u.name AS assignee_name
        FROM tasks t
        LEFT JOIN users u ON t.assigned_to = u.id
        WHERE t.id = $1`,
@@ -36,7 +36,7 @@ const notifyTaskCompletion = async (req, res, next) => {
     const info = await sendTaskCompletionEmail(recipient_email, {
       taskTitle:    task.title,
       assigneeName: task.assignee_name,
-      completedAt:  new Date(task.updated_at).toLocaleString(),
+      completedAt:  new Date().toLocaleString(),
     });
 
     res.json({ success: true, message: 'Task completion email sent.', messageId: info.messageId });
