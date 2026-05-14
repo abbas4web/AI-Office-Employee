@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { API_URL, authHeader } from "../api";
-import { RefreshCw, Plus, Pencil, Trash2 } from "lucide-react";
+import { RefreshCw, Plus, Pencil, Trash2, Search } from "lucide-react";
 import Drawer from "../components/Drawer";
 
 export default function Tasks() {
@@ -10,10 +10,16 @@ export default function Tasks() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("dueDateAsc");
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [formError, setFormError] = useState('');
+  const [taskToDelete, setTaskToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const emptyForm = {
     title: "",
@@ -122,20 +128,37 @@ export default function Tasks() {
     setFormError(''); setShowDrawer(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this task?")) return;
+  const handleDelete = (id) => {
+    setTaskToDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!taskToDelete) return;
+    setDeleting(true);
     try {
-      const res = await fetch(`${API_URL}/api/tasks/${id}`, {
+      const res = await fetch(`${API_URL}/api/tasks/${taskToDelete}`, {
         method: "DELETE",
         headers: authHeader(),
       });
       if (res.ok) {
         fetchTasks();
+        setTaskToDelete(null);
+        
+        // Show success toast
+        const toast = document.createElement('div');
+        toast.className = 'gmail-toast';
+        toast.innerHTML = '🗑️ Task deleted successfully';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
       } else {
         setError('Failed to delete task.');
+        setTaskToDelete(null);
       }
     } catch {
       setError('Cannot reach server.');
+      setTaskToDelete(null);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -168,10 +191,28 @@ export default function Tasks() {
 
   const closeDrawer = () => { setShowDrawer(false); setEditingTask(null); setFormData(emptyForm); setFormError(''); };
 
-  const filteredTasks =
-    priorityFilter === "all"
-      ? tasks
-      : tasks.filter((task) => task.priority === priorityFilter);
+  // Apply search, filters, and sorting
+  let filteredTasks = tasks.filter((task) => {
+    const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
+    const matchesStatus = statusFilter === "all" || task.status === statusFilter;
+    const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesPriority && matchesStatus && matchesSearch;
+  });
+
+  // Sort tasks
+  filteredTasks.sort((a, b) => {
+    if (sortBy === "dueDateAsc") {
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return new Date(a.due_date) - new Date(b.due_date);
+    }
+    if (sortBy === "dueDateDesc") {
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return new Date(b.due_date) - new Date(a.due_date);
+    }
+    return 0; // Default or no sort
+  });
 
   const getPriorityColor = (priority) => {
     const colors = {
@@ -185,20 +226,9 @@ export default function Tasks() {
 
   return (
     <div className="tasks-page">
-      <div className="page-header">
+      <div className="page-header" style={{ marginBottom: '16px' }}>
         <h1>Tasks</h1>
         <div className="header-actions">
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="filter-select"
-          >
-            <option value="all">All Priorities</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="urgent">Urgent</option>
-          </select>
           <button className="btn btn-secondary" onClick={fetchTasks} disabled={loading}>
             <RefreshCw size={15} />{loading ? 'Loading...' : 'Refresh'}
           </button>
@@ -206,6 +236,42 @@ export default function Tasks() {
             <Plus size={15} />Add Task
           </button>
         </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="filters-bar" style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="search-input-wrapper" style={{ position: 'relative', flex: '1', minWidth: '200px' }}>
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="form-control"
+            style={{ paddingLeft: '36px', height: '40px', borderRadius: '8px' }}
+          />
+        </div>
+
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="filter-select" style={{ height: '40px' }}>
+          <option value="all">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+
+        <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="filter-select" style={{ height: '40px' }}>
+          <option value="all">All Priorities</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
+
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="filter-select" style={{ height: '40px' }}>
+          <option value="dueDateAsc">Due Date (Earliest)</option>
+          <option value="dueDateDesc">Due Date (Latest)</option>
+        </select>
       </div>
 
       {error && <div className="error-banner">{error}</div>}
@@ -343,6 +409,40 @@ export default function Tasks() {
           </div>
         </form>
       </Drawer>
+
+      {/* Delete Confirmation Modal */}
+      {taskToDelete && (
+        <div className="modal-overlay" onClick={() => !deleting && setTaskToDelete(null)}>
+          <div className="modal-box modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 style={{ color: '#ef4444' }}>⚠️ Delete Task</h2>
+              <button className="modal-close" onClick={() => setTaskToDelete(null)} disabled={deleting}>✕</button>
+            </div>
+            <div className="modal-content" style={{ padding: '0 24px 24px' }}>
+              <p style={{ color: '#475569', lineHeight: '1.5', margin: '0 0 20px' }}>
+                Are you sure you want to delete this task? This action cannot be undone.
+              </p>
+              <div className="modal-footer" style={{ margin: 0, padding: 0 }}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setTaskToDelete(null)} 
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="btn btn-danger" 
+                  style={{ background: '#ef4444', color: 'white', border: 'none' }}
+                  onClick={confirmDelete} 
+                  disabled={deleting}
+                >
+                  {deleting ? 'Deleting...' : 'Delete Task'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
