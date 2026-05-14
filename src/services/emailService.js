@@ -167,7 +167,8 @@ const sendAITaskCompletionEmails = async (clientEmail, employeeEmail, aiContent)
     }));
   }
 
-  await Promise.allSettled(promises);
+  const results = await Promise.all(promises);
+  return results;
 };
 
 module.exports = { sendTaskCompletionEmail, sendReminderEmail, sendAITaskCompletionEmails };
