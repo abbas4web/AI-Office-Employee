@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { API_URL, authHeader } from "../api";
-import { RefreshCw, Plus, Pencil, Trash2, Search } from "lucide-react";
+import { RefreshCw, Plus, Pencil, Trash2 } from "lucide-react";
 import Drawer from "../components/Drawer";
+import FilterBar from "../components/FilterBar";
 
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -238,41 +239,16 @@ export default function Tasks() {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="filters-bar" style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div className="search-input-wrapper" style={{ position: 'relative', flex: '1', minWidth: '200px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-          <input
-            type="text"
-            placeholder="Search tasks..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="form-control"
-            style={{ paddingLeft: '36px', height: '40px', borderRadius: '8px' }}
-          />
-        </div>
-
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="filter-select" style={{ height: '40px' }}>
-          <option value="all">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-
-        <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="filter-select" style={{ height: '40px' }}>
-          <option value="all">All Priorities</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-          <option value="urgent">Urgent</option>
-        </select>
-
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="filter-select" style={{ height: '40px' }}>
-          <option value="dueDateAsc">Due Date (Earliest)</option>
-          <option value="dueDateDesc">Due Date (Latest)</option>
-        </select>
-      </div>
+      <FilterBar 
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        priorityFilter={priorityFilter}
+        setPriorityFilter={setPriorityFilter}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+      />
 
       {error && <div className="error-banner">{error}</div>}
 
