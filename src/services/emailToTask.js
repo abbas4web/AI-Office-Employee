@@ -11,14 +11,8 @@ const convertEmailToTask = async (email, userId) => {
   const title = email.subject || 'Email Task (No Subject)';
   const priority = email.priority || 'medium';
 
-  // Build description: include AI summary if available
-  const description = [
-    `From: ${email.sender_name} <${email.sender_email}>`,
-    email.summary ? `\nAI Summary: ${email.summary}` : '',
-    '',
-    'Email preview:',
-    email.snippet || '(No preview available)',
-  ].filter(Boolean).join('\n');
+  // Description = AI summary only. No fallbacks.
+  const description = email.summary || null;
 
   // Calculate due_date from suggested_due_days if provided
   let dueDate = null;
