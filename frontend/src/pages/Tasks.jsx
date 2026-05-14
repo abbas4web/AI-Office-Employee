@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { API_URL, authHeader } from "../api";
 import { RefreshCw, Plus, Pencil, Trash2 } from "lucide-react";
+import Drawer from "../components/Drawer";
 
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
   const [clients, setClients] = useState([]);
-  const [showModal, setShowModal] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -118,7 +119,7 @@ export default function Tasks() {
       assigned_to: task.assigned_to || "",
       client_id: task.client_id || "",
     });
-    setShowModal(true);
+    setFormError(''); setShowDrawer(true);
   };
 
   const handleDelete = async (id) => {
@@ -151,12 +152,9 @@ export default function Tasks() {
     }
   };
 
-  const closeModal = () => {
-    setShowModal(false);
-    setEditingTask(null);
-    setFormData(emptyForm);
-    setFormError('');
-  };
+  const openAdd = () => { setEditingTask(null); setFormData(emptyForm); setFormError(''); setShowDrawer(true); };
+
+  const closeDrawer = () => { setShowDrawer(false); setEditingTask(null); setFormData(emptyForm); setFormError(''); };
 
   const filteredTasks =
     priorityFilter === "all"
@@ -192,7 +190,7 @@ export default function Tasks() {
           <button className="btn btn-secondary" onClick={fetchTasks} disabled={loading}>
             <RefreshCw size={15} />{loading ? 'Loading...' : 'Refresh'}
           </button>
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          <button className="btn btn-primary" onClick={openAdd}>
             <Plus size={15} />Add Task
           </button>
         </div>
@@ -261,34 +259,37 @@ export default function Tasks() {
         </table>
       )}
 
-      {showModal && (
-        <div className="modal">
-          <div className="modal-content">
-            <h2>{editingTask ? "Edit Task" : "Add New Task"}</h2>
-            {formError && <div className="error-banner">{formError}</div>}
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Title *</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                />
-              </div>
+      <Drawer
+        open={showDrawer}
+        onClose={closeDrawer}
+        title={editingTask ? 'Edit Task' : 'Add New Task'}
+        subtitle={editingTask ? 'Update task details and assignment.' : 'Create a new task and assign it to a team member.'}
+        footer={
+          <>
+            <button type="button" className="btn btn-secondary" onClick={closeDrawer} disabled={saving}>Cancel</button>
+            <button type="button" className="btn btn-primary" onClick={handleSubmit} disabled={saving}>
+              {saving ? 'Saving...' : editingTask ? 'Save Changes' : 'Create Task'}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmit}>
+          {formError && <div className="error-banner" style={{marginBottom:'1rem'}}>{formError}</div>}
+
+          <div className="drawer-section">
+            <p className="drawer-section-title">Task Details</p>
+            <div className="form-group">
+              <label>Title *</label>
+              <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Task title" required />
+            </div>
+            <div className="form-group">
+              <label>Description</label>
+              <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Describe the task..." rows={3} />
+            </div>
+            <div className="form-grid-2">
               <div className="form-group">
                 <label>Priority</label>
-                <select
-                  value={formData.priority}
-                  onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                >
+                <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})}>
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
                   <option value="high">High</option>
@@ -297,60 +298,39 @@ export default function Tasks() {
               </div>
               <div className="form-group">
                 <label>Status</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                >
+                <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
                   <option value="pending">Pending</option>
                   <option value="in_progress">In Progress</option>
                   <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
-              <div className="form-group">
-                <label>Due Date</label>
-                <input
-                  type="date"
-                  value={formData.due_date}
-                  onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                />
-              </div>
-              <div className="form-group">
-                <label>Assigned To</label>
-                <select
-                  value={formData.assigned_to}
-                  onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
-                >
-                  <option value="">-- Unassigned --</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>{user.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Client</label>
-                <select
-                  value={formData.client_id}
-                  onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
-                >
-                  <option value="">-- No Client (Internal) --</option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>{client.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="modal-actions">
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-                <button type="button" className="btn btn-secondary" onClick={closeModal} disabled={saving}>
-                  Cancel
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="drawer-section">
+            <p className="drawer-section-title">Assignment</p>
+            <div className="form-group">
+              <label>Assigned To</label>
+              <select value={formData.assigned_to} onChange={e => setFormData({...formData, assigned_to: e.target.value})}>
+                <option value="">-- Unassigned --</option>
+                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Client</label>
+              <select value={formData.client_id} onChange={e => setFormData({...formData, client_id: e.target.value})}>
+                <option value="">-- No Client (Internal) --</option>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Due Date</label>
+              <input type="date" value={formData.due_date} onChange={e => setFormData({...formData, due_date: e.target.value})} />
+            </div>
+          </div>
+        </form>
+      </Drawer>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { API_URL, authHeader } from '../api'
 import { UserCog, UserPlus, Crown, Briefcase, User, Pencil, Trash2, RefreshCw, Lock } from 'lucide-react'
+import Drawer from '../components/Drawer'
 
 const ROLE_COLORS = {
   admin:    { bg: '#fde8e8', color: '#c0392b' },
@@ -200,64 +201,57 @@ export default function Team() {
         </p>
       )}
 
-      {/* Add / Edit Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{editTarget ? '✏️ Edit Employee' : '➕ Add Employee'}</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+      <Drawer
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editTarget ? 'Edit Employee' : 'Add Employee'}
+        subtitle={editTarget ? 'Update employee details and role.' : 'Add a new member to your team.'}
+        footer={
+          <>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving...' : editTarget ? 'Save Changes' : 'Add Employee'}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleSave}>
+          {formError && <div className="error-banner" style={{marginBottom:'1rem'}}>{formError}</div>}
+          <div className="drawer-section">
+            <p className="drawer-section-title">Employee Information</p>
+            <div className="form-group">
+              <label>Full Name</label>
+              <input type="text" value={form.name} required onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. John Smith" />
             </div>
-
-            {formError && <div className="error-banner">{formError}</div>}
-
-            <form onSubmit={handleSave} className="modal-form">
-              <div className="form-group">
-                <label>Full Name</label>
-                <input
-                  type="text" value={form.name} required
-                  onChange={e => setForm({...form, name: e.target.value})}
-                  placeholder="e.g. John Smith"
-                />
-              </div>
-              <div className="form-group">
-                <label>Email</label>
-                <input
-                  type="email" value={form.email} required
-                  onChange={e => setForm({...form, email: e.target.value})}
-                  placeholder="john@company.com"
-                />
-              </div>
-              <div className="form-group">
-                <label>{editTarget ? 'New Password (leave blank to keep current)' : 'Password'}</label>
-                <input
-                  type="password" value={form.password}
-                  required={!editTarget}
-                  minLength={editTarget ? 0 : 6}
-                  onChange={e => setForm({...form, password: e.target.value})}
-                  placeholder={editTarget ? 'Leave blank to keep current' : 'Min 6 characters'}
-                />
-              </div>
-              <div className="form-group">
-                <label>Role</label>
-                <select value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
-                  <option value="employee">👤 Employee</option>
-                  <option value="manager">🏢 Manager</option>
-                  <option value="admin">👑 Admin</option>
-                </select>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Saving...' : editTarget ? 'Save Changes' : 'Add Employee'}
-                </button>
-              </div>
-            </form>
+            <div className="form-group">
+              <label>Email</label>
+              <input type="email" value={form.email} required onChange={e => setForm({...form, email: e.target.value})} placeholder="john@company.com" />
+            </div>
+            <div className="form-group">
+              <label>Role</label>
+              <select value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+                <option value="employee">Employee</option>
+                <option value="manager">Manager</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
           </div>
-        </div>
-      )}
+          <div className="drawer-section">
+            <p className="drawer-section-title">Security</p>
+            <div className="form-group">
+              <label>{editTarget ? 'New Password (leave blank to keep current)' : 'Password'}</label>
+              <input
+                type="password"
+                value={form.password}
+                required={!editTarget}
+                minLength={editTarget ? 0 : 6}
+                onChange={e => setForm({...form, password: e.target.value})}
+                placeholder={editTarget ? 'Leave blank to keep current' : 'Min 6 characters'}
+              />
+            </div>
+          </div>
+        </form>
+      </Drawer>
 
       {/* Delete Confirm Modal */}
       {deleteTarget && (
