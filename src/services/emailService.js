@@ -85,7 +85,7 @@ const reminderTemplate = ({ reminderTitle, message, taskTitle, dueDate }) => ({
         ${taskTitle ? `
         <div style="padding: 14px 18px; background: #fefce8; border-left: 4px solid #f59e0b; border-radius: 6px; margin-bottom: 16px;">
           <p style="margin: 0; color: #92400e; font-size: 14px;"><strong>Related Task:</strong> ${taskTitle}</p>
-          ${dueDate ? `<p style="margin: 6px 0 0; color: #92400e; font-size: 13px;"><strong>Due:</strong> ${formatDateDDMMYYYY(dueDate)}</p>` : ''}
+          ${dueDate && dueDate !== 'N/A' ? `<p style="margin: 6px 0 0; color: #92400e; font-size: 13px;"><strong>Due:</strong> ${formatDateDDMMYYYY(dueDate)}</p>` : ''}
         </div>` : ''}
 
         <p style="color: #64748b; font-size: 13px; margin: 0;">Please log in to the portal to take action on this reminder.</p>
