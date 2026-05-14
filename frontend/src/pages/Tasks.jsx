@@ -147,6 +147,26 @@ export default function Tasks() {
         body: JSON.stringify({ status: newStatus }),
       });
       fetchTasks();
+
+      // If task is marked as completed, ask if they want to send an email
+      if (newStatus === 'completed') {
+        const email = window.prompt("Task marked as completed! Enter an email address to notify (leave blank to skip):", "plantiqx@gmail.com");
+        if (email) {
+          fetch(`${API_URL}/api/email/task-completion`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...authHeader() },
+            body: JSON.stringify({ task_id: id, recipient_email: email }),
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              alert("✅ Task completion email sent successfully to " + email);
+            } else {
+              alert("❌ Failed to send email: " + data.message);
+            }
+          });
+        }
+      }
     } catch {
       setError('Failed to update status.');
     }

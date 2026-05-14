@@ -11,6 +11,7 @@ const debugRoutes = require('./routes/debugRoutes');
 const activityRoutes = require('./routes/activityRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const gmailRoutes = require('./routes/gmailRoutes');
+const emailRoutes = require('./routes/emailRoutes');
 const errorHandler = require('./middleware/errorHandler');
 const { protect } = require('./middleware/authMiddleware');
 
@@ -38,6 +39,7 @@ app.use('/api/debug', protect, debugRoutes);
 app.use('/api/activity-logs', protect, activityRoutes);
 app.use('/api/ai', protect, aiRoutes);
 app.use('/api/gmail', gmailRoutes); // gmail has its own per-route protect (callback is public)
+app.use('/api/email', protect, emailRoutes);
 
 // --- Error Handler (must be last) ---
 app.use(errorHandler);
