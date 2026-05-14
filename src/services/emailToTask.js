@@ -14,6 +14,18 @@ const convertEmailToTask = async (email, userId) => {
   // Description = AI summary only. No fallbacks.
   const description = email.summary || null;
 
+  // Auto-match sender email → client record
+  let clientId = null;
+  if (email.sender_email) {
+    const clientMatch = await db.query(
+      `SELECT id FROM clients WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+      [email.sender_email]
+    );
+    if (clientMatch.rows.length > 0) {
+      clientId = clientMatch.rows[0].id;
+    }
+  }
+
   // Calculate due_date from suggested_due_days if provided
   let dueDate = null;
   if (email.due_days && Number.isInteger(email.due_days)) {
@@ -23,10 +35,10 @@ const convertEmailToTask = async (email, userId) => {
   }
 
   const result = await db.query(
-    `INSERT INTO tasks (title, description, priority, status, assigned_to, due_date)
-     VALUES ($1, $2, $3, 'pending', $4, $5)
+    `INSERT INTO tasks (title, description, priority, status, assigned_to, client_id, due_date)
+     VALUES ($1, $2, $3, 'pending', $4, $5, $6)
      RETURNING *`,
-    [title, description, priority, userId, dueDate]
+    [title, description, priority, userId, clientId, dueDate]
   );
 
   const task = result.rows[0];

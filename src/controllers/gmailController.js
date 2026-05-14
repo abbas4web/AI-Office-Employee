@@ -85,8 +85,24 @@ const analyzeEmail = async (req, res, next) => {
       err.statusCode = 400;
       return next(err);
     }
+
+    // Run AI analysis
     const analysis = await getEmailAnalysis(email);
-    res.json({ success: true, analysis });
+
+    // Auto-match sender email → client record
+    let matched_client = null;
+    if (email.sender_email) {
+      const db = require('../db');
+      const clientMatch = await db.query(
+        `SELECT id, name, email FROM clients WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+        [email.sender_email]
+      );
+      if (clientMatch.rows.length > 0) {
+        matched_client = clientMatch.rows[0];
+      }
+    }
+
+    res.json({ success: true, analysis: { ...analysis, matched_client } });
   } catch (err) {
     next(err);
   }

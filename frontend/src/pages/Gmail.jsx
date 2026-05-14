@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { API_URL, authHeader } from '../api'
-import { Mail, WifiOff, Wifi, RefreshCw, Inbox, Bot, CheckCircle2, Trash2, AlertTriangle, Clock, Tag, Sparkles } from 'lucide-react'
+import { Mail, WifiOff, Wifi, RefreshCw, Inbox, Bot, CheckCircle2, Trash2, AlertTriangle, AlertCircle, Clock, Tag, Sparkles, Building2 } from 'lucide-react'
 
 const CATEGORY_LABELS = {
   client_request: 'Client Request',
@@ -227,6 +227,12 @@ export default function Gmail() {
                         {a.suggested_due_days && (
                           <span style={{display:'flex',alignItems:'center',gap:'0.4rem'}}>
                             <Clock size={13}/>Due in {a.suggested_due_days} day{a.suggested_due_days !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {a.matched_client && (
+                          <span className="gmail-client-match">
+                            <Building2 size={13}/>
+                            Client matched: <strong>{a.matched_client.name}</strong>
                           </span>
                         )}
                       </div>
