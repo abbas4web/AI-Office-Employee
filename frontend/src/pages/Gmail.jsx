@@ -81,6 +81,14 @@ export default function Gmail() {
     try {
       const res = await fetch(`${API_URL}/api/gmail/emails?limit=20`, { headers: authHeader() })
       const data = await res.json()
+      
+      if (res.status === 401 && data.error === 'invalid_grant') {
+        setStatus({ connected: false });
+        setEmails([]);
+        showToast('⚠️ Gmail connection expired. Please reconnect.');
+        return;
+      }
+
       if (data.success) setEmails(data.emails)
       else setEmailsError(data.message || 'Failed to load emails.')
     } catch { setEmailsError('Cannot reach server.') }

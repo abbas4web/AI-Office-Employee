@@ -68,6 +68,16 @@ const getEmails = async (req, res, next) => {
     const emails = await readEmails(req.user.id, parseInt(limit), q);
     res.json({ success: true, emails, total: emails.length });
   } catch (err) {
+    // If the token is expired/revoked, Google throws 'invalid_grant'
+    if (err.message && err.message.includes('invalid_grant')) {
+      const { disconnectGmail } = require('../services/gmailService');
+      await disconnectGmail(req.user.id); // Clear the bad token
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Gmail connection expired. Please reconnect your account.',
+        error: 'invalid_grant'
+      });
+    }
     next(err);
   }
 };
