@@ -105,45 +105,44 @@ const updateTask = async (req, res, next) => {
     });
 
     // --- AI Auto Email Logic ---
-    // If status changed to 'completed', send AI emails in the background
+    // In serverless environments (Vercel), we must await this before res.json
     if (status === 'completed' && existingTask.status !== 'completed') {
-      // Fetch rich details for AI context
-      db.query(`
-        SELECT t.title, t.description, 
-               u.name AS employee_name, u.email AS employee_email,
-               c.name AS client_name, c.email AS client_email
-        FROM tasks t
-        LEFT JOIN users u ON t.assigned_to = u.id
-        LEFT JOIN clients c ON t.client_id = c.id
-        WHERE t.id = $1
-      `, [task.id]).then(async (result) => {
+      try {
+        const result = await db.query(`
+          SELECT t.title, t.description, 
+                 u.name AS employee_name, u.email AS employee_email,
+                 c.name AS client_name, c.email AS client_email
+          FROM tasks t
+          LEFT JOIN users u ON t.assigned_to = u.id
+          LEFT JOIN clients c ON t.client_id = c.id
+          WHERE t.id = $1
+        `, [task.id]);
+
         if (result.rows.length > 0) {
           const tInfo = result.rows[0];
           const hasClientEmail = !!tInfo.client_email;
           const hasEmployeeEmail = !!tInfo.employee_email;
           
           if (hasClientEmail || hasEmployeeEmail) {
-            try {
-              console.log(`Generating AI completion emails for task ${task.id}...`);
-              const aiEmails = await generateCompletionEmails({
-                title: tInfo.title,
-                description: tInfo.description,
-                clientName: tInfo.client_name,
-                employeeName: tInfo.employee_name
-              });
-              
-              await sendAITaskCompletionEmails(
-                hasClientEmail ? tInfo.client_email : null,
-                hasEmployeeEmail ? tInfo.employee_email : null,
-                aiEmails
-              );
-              console.log(`✅ AI emails sent successfully for task ${task.id}`);
-            } catch (aiErr) {
-              console.error(`❌ Failed to send AI completion emails for task ${task.id}:`, aiErr);
-            }
+            console.log(`Generating AI completion emails for task ${task.id}...`);
+            const aiEmails = await generateCompletionEmails({
+              title: tInfo.title,
+              description: tInfo.description,
+              clientName: tInfo.client_name,
+              employeeName: tInfo.employee_name
+            });
+            
+            await sendAITaskCompletionEmails(
+              hasClientEmail ? tInfo.client_email : null,
+              hasEmployeeEmail ? tInfo.employee_email : null,
+              aiEmails
+            );
+            console.log(`✅ AI emails sent successfully for task ${task.id}`);
           }
         }
-      }).catch(err => console.error("Error fetching task details for email:", err));
+      } catch (err) {
+        console.error("Error fetching task details or sending AI email:", err);
+      }
     }
 
     res.json({ success: true, data: task });
