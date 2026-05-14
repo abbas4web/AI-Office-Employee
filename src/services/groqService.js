@@ -7,6 +7,26 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
  * Used by the general AI chat assistant.
  */
 const sendPromptWithContext = async (context, prompt) => {
+  const tools = [
+    {
+      type: 'function',
+      function: {
+        name: 'send_email_reminder',
+        description: 'Sends a task reminder email to an employee or client. Use this whenever the user asks to send an email, remind someone, or notify someone. Find their email in the provided PORTAL DATA context.',
+        parameters: {
+          type: 'object',
+          properties: {
+            to_email: { type: 'string', description: 'The email address of the recipient (e.g., john@company.com)' },
+            task_title: { type: 'string', description: 'The title of the task to remind them about' },
+            message: { type: 'string', description: 'A short, professional reminder message' },
+            due_date: { type: 'string', description: 'The due date of the task, if available (e.g., 2026-05-15)' }
+          },
+          required: ['to_email', 'task_title', 'message']
+        }
+      }
+    }
+  ];
+
   const response = await groq.chat.completions.create({
     model: 'llama-3.1-8b-instant',
     messages: [
@@ -19,13 +39,16 @@ ${context}
 
 Use this data to answer the user's questions accurately. Be concise and professional.
 If asked to summarize tasks, refer to the actual tasks listed above.
+If the user asks you to send an email or remind someone, use the send_email_reminder tool and look up their email from the data above.
 If no data is relevant, answer generally but mention what data you have access to.`,
       },
       { role: 'user', content: prompt },
     ],
+    tools: tools,
+    tool_choice: 'auto',
   });
 
-  return response.choices[0].message.content;
+  return response.choices[0].message;
 };
 
 /**

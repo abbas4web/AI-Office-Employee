@@ -1,4 +1,5 @@
 const { sendPromptWithContext, getTaskSummaryJSON, getProductivitySuggestions } = require('../services/groqService');
+const { sendReminderEmail } = require('../services/emailService');
 const db = require('../db');
 
 /**
@@ -135,8 +136,39 @@ const askAI = async (req, res, next) => {
 
     context += '\n=== END OF PORTAL DATA ===\n';
 
-    const reply = await sendPromptWithContext(context, prompt.trim());
-    res.json({ success: true, reply });
+    const aiMessage = await sendPromptWithContext(context, prompt.trim());
+
+    // Check if the AI decided to call a tool
+    if (aiMessage.tool_calls && aiMessage.tool_calls.length > 0) {
+      const toolCall = aiMessage.tool_calls[0];
+      
+      if (toolCall.function.name === 'send_email_reminder') {
+        const args = JSON.parse(toolCall.function.arguments);
+        
+        try {
+          await sendReminderEmail(args.to_email, {
+            reminderTitle: 'Task Reminder from AI Assistant',
+            message: args.message,
+            taskTitle: args.task_title,
+            dueDate: args.due_date || 'N/A'
+          });
+          
+          return res.json({ 
+            success: true, 
+            reply: `✅ I have successfully sent an email reminder to **${args.to_email}** regarding the task **"${args.task_title}"**.` 
+          });
+        } catch (error) {
+          console.error("Failed to send AI email:", error);
+          return res.json({ 
+            success: true, 
+            reply: `⚠️ I tried to send an email to **${args.to_email}**, but there was a server error connecting to the email service.` 
+          });
+        }
+      }
+    }
+
+    // Normal text response fallback
+    res.json({ success: true, reply: aiMessage.content });
   } catch (err) {
     next(err);
   }
