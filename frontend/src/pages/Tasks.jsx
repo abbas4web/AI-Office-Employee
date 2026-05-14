@@ -148,8 +148,11 @@ export default function Tasks() {
       });
       fetchTasks();
 
-      // If task is marked as completed, show toast that AI is sending emails
-      if (newStatus === 'completed') {
+      // Find the task we just updated
+      const updatedTask = tasks.find(t => t.id === id);
+
+      // If task is marked as completed AND it has an assignee or client, show toast
+      if (newStatus === 'completed' && updatedTask && (updatedTask.assigned_to || updatedTask.client_id)) {
         const toast = document.createElement('div');
         toast.className = 'gmail-toast';
         toast.innerHTML = '✨ Task completed! AI is generating and sending emails...';
