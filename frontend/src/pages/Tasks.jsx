@@ -1,8 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { API_URL, authHeader } from "../api";
 import { RefreshCw, Plus, Pencil, Trash2 } from "lucide-react";
 import Drawer from "../components/Drawer";
 import FilterBar from "../components/FilterBar";
+import { AgGridReact } from 'ag-grid-react';
+import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-quartz.css";
+
+// Register AG Grid Modules (Required for v32+)
+ModuleRegistry.registerModules([AllCommunityModule]);
 
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -21,6 +28,12 @@ export default function Tasks() {
   const [formError, setFormError] = useState('');
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Pagination State
+  const [gridApi, setGridApi] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const emptyForm = {
     title: "",
@@ -225,6 +238,112 @@ export default function Tasks() {
     return colors[priority] || "#666";
   };
 
+  // AG-Grid Pagination Helpers
+  const onGridReady = (params) => {
+    setGridApi(params.api);
+  };
+
+  const onPaginationChanged = () => {
+    if (gridApi) {
+      setCurrentPage(gridApi.paginationGetCurrentPage() + 1);
+      setTotalPages(gridApi.paginationGetTotalPages() === 0 ? 1 : gridApi.paginationGetTotalPages());
+    }
+  };
+
+  const handlePageSizeChange = (e) => {
+    const newSize = Number(e.target.value);
+    setPageSize(newSize);
+    if (gridApi) gridApi.paginationSetPageSize(newSize);
+  };
+
+  const goToPage = (page) => {
+    if (page === '...') return;
+    if (gridApi) gridApi.paginationGoToPage(page - 1);
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 4) {
+        pages.push(1, 2, 3, 4, 5, '...', totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+      }
+    }
+    return pages;
+  };
+
+  // AG-Grid Column Definitions
+  const colDefs = useMemo(() => [
+    { field: "title", headerName: "Title", flex: 1, minWidth: 100 },
+    { field: "description", headerName: "Description", flex: 1.5, minWidth: 120, valueFormatter: p => p.value || "-" },
+    { 
+      field: "priority", 
+      headerName: "Priority", 
+      flex: 0.8,
+      minWidth: 100,
+      cellRenderer: (params) => (
+        <span
+          className="priority-badge"
+          style={{ backgroundColor: getPriorityColor(params.value) }}
+        >
+          {params.value}
+        </span>
+      )
+    },
+    {
+      field: "status",
+      headerName: "Status",
+      flex: 1,
+      minWidth: 130,
+      cellRenderer: (params) => (
+        <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+          <select
+            value={params.value}
+            onChange={(e) => handleStatusChange(params.data.id, e.target.value)}
+            className="status-select"
+            style={{ width: '100%', height: '34px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.85rem' }}
+          >
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+      )
+    },
+    { field: "assigned_user_name", headerName: "Assigned To", flex: 1, minWidth: 120, valueFormatter: p => p.value || "-" },
+    { field: "client_name", headerName: "Client", flex: 1, minWidth: 120, valueFormatter: p => p.value || "-" },
+    { 
+      field: "due_date", 
+      headerName: "Due Date", 
+      flex: 0.8,
+      minWidth: 100,
+      valueFormatter: p => p.value ? new Date(p.value).toLocaleDateString() : "-"
+    },
+    {
+      headerName: "Actions",
+      flex: 1.2,
+      minWidth: 160,
+      sortable: false,
+      filter: false,
+      cellRenderer: (params) => (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', height: '100%' }}>
+          <button className="btn btn-small btn-secondary" onClick={() => handleEdit(params.data)} style={{ padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Pencil size={13} />Edit
+          </button>
+          <button className="btn btn-small btn-danger" onClick={() => handleDelete(params.data.id)} style={{ padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Trash2 size={13} />Delete
+          </button>
+        </div>
+      )
+    }
+  ], [tasks]); // Re-create colDefs when tasks change (for proper handleStatusChange/Edit context if needed, though they rely on state)
+
   return (
     <div className="tasks-page">
       <div className="page-header" style={{ marginBottom: '16px' }}>
@@ -257,60 +376,96 @@ export default function Tasks() {
           <div className="spinner"></div>
           <p>Loading tasks...</p>
         </div>
-      ) : filteredTasks.length === 0 ? (
-        <p className="no-data">No tasks found</p>
       ) : (
-        <table className="tasks-table">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Description</th>
-              <th>Priority</th>
-              <th>Status</th>
-              <th>Assigned To</th>
-              <th>Client</th>
-              <th>Due Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTasks.map((task) => (
-              <tr key={task.id}>
-                <td>{task.title}</td>
-                <td>{task.description || "-"}</td>
-                <td>
-                  <span
-                    className="priority-badge"
-                    style={{ backgroundColor: getPriorityColor(task.priority) }}
+        <div 
+          className="table-and-pagination-wrapper"
+          style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            height: 'calc(100vh - 230px)', 
+            minHeight: '450px',
+            background: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+            border: '1px solid #e5e7eb',
+            overflow: 'hidden',
+            paddingTop: '1rem',
+            paddingLeft: '1rem',
+            paddingRight: '1rem'
+          }}
+        >
+          <div 
+            className="ag-theme-quartz premium-grid" 
+            style={{ 
+              flex: 1,
+              width: '100%',
+              minHeight: 0
+            }}
+          >
+          <AgGridReact 
+            rowData={filteredTasks} 
+            columnDefs={colDefs} 
+            rowHeight={60}
+            headerHeight={48}
+            pagination={true}
+            paginationPageSize={pageSize}
+            suppressPaginationPanel={true}
+            onGridReady={onGridReady}
+            onPaginationChanged={onPaginationChanged}
+            defaultColDef={{
+              sortable: true,
+              filter: true,
+              resizable: true,
+              suppressMovable: true
+            }}
+            autoSizeStrategy={{
+              type: 'fitGridWidth'
+            }}
+          />
+          </div>
+
+          {/* Custom Pagination Footer (Fixed at bottom of wrapper) */}
+          {filteredTasks.length > 0 && (
+            <div className="custom-pagination" style={{ padding: '0.75rem 0.5rem', borderTop: '1px solid #f3f4f6', background: '#ffffff', margin: 0 }}>
+              <div className="page-size-selector">
+                <span>Item Per Page</span>
+                <select value={pageSize} onChange={handlePageSizeChange} className="page-size-dropdown">
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+              <div className="page-controls">
+                <button 
+                  onClick={() => goToPage(currentPage - 1)} 
+                  disabled={currentPage === 1} 
+                  className="page-btn prev-next"
+                >
+                  &larr; Previous
+                </button>
+                
+                {getPageNumbers().map((page, index) => (
+                  <button 
+                    key={index} 
+                    onClick={() => goToPage(page)} 
+                    className={`page-btn num-btn ${currentPage === page ? 'active' : ''} ${page === '...' ? 'dots' : ''}`}
+                    disabled={page === '...'}
                   >
-                    {task.priority}
-                  </span>
-                </td>
-                <td>
-                  <select
-                    value={task.status}
-                    onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                    className="status-select"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </td>
-                <td>{task.assigned_user_name || "-"}</td>
-                <td>{task.client_name || "-"}</td>
-                <td>
-                  {task.due_date ? new Date(task.due_date).toLocaleDateString() : "-"}
-                </td>
-                <td>
-                  <button className="btn btn-small" onClick={() => handleEdit(task)}><Pencil size={13} />Edit</button>
-                  <button className="btn btn-small btn-danger" onClick={() => handleDelete(task.id)}><Trash2 size={13} />Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    {page}
+                  </button>
+                ))}
+
+                <button 
+                  onClick={() => goToPage(currentPage + 1)} 
+                  disabled={currentPage === totalPages} 
+                  className="page-btn prev-next"
+                >
+                  Next &rarr;
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       <Drawer
