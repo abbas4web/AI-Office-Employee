@@ -5,7 +5,10 @@ const { logActivity } = require('./activityService');
  * Convert a Gmail email object into a task in the database.
  *
  * @param {object} email  - { sender_name, sender_email, subject, snippet }
- * @param {string} userId - UUID of the logged-in user (task creator + assignee)
+ * @param {string} userId - UUID of the logged-in user (creator, used only for activity log)
+ *
+ * NOTE: assigned_to is intentionally left NULL so the manager/admin
+ * can manually assign the task to an employee.
  */
 const convertEmailToTask = async (email, userId) => {
   const title = email.subject || 'Email Task (No Subject)';
@@ -35,10 +38,10 @@ const convertEmailToTask = async (email, userId) => {
   }
 
   const result = await db.query(
-    `INSERT INTO tasks (title, description, priority, status, assigned_to, client_id, due_date)
-     VALUES ($1, $2, $3, 'pending', $4, $5, $6)
+    `INSERT INTO tasks (title, description, priority, status, client_id, due_date)
+     VALUES ($1, $2, $3, 'pending', $4, $5)
      RETURNING *`,
-    [title, description, priority, userId, clientId, dueDate]
+    [title, description, priority, clientId, dueDate]
   );
 
   const task = result.rows[0];
