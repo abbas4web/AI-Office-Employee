@@ -1,4 +1,4 @@
-const { sendPromptWithContext, getTaskSummaryJSON, getProductivitySuggestions } = require('../services/groqService');
+const { sendPromptWithContext, getTaskSummaryJSON, getProductivitySuggestions, runOfficeWorkflow } = require('../services/groqService');
 const { sendReminderEmail } = require('../services/emailService');
 const db = require('../db');
 
@@ -289,4 +289,104 @@ const productivitySuggestions = async (req, res, next) => {
   }
 };
 
-module.exports = { askAI, taskSummary, productivitySuggestions };
+/**
+ * POST /api/ai/workflow
+ * The full AI Office Employee workflow.
+ * Fetches tasks, reminders, and emails as input sources,
+ * and returns a comprehensive structured JSON daily briefing.
+ */
+const runWorkflow = async (req, res, next) => {
+  try {
+    const now = new Date();
+    const todayStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+
+    // Fetch all data sources in parallel
+    const [tasksResult, remindersResult, emailsResult] = await Promise.all([
+      db.query(
+        `SELECT t.id, t.title, t.description, t.priority, t.status, t.due_date,
+                u.name AS assigned_to, c.name AS client_name
+         FROM tasks t
+         LEFT JOIN users u ON t.assigned_to = u.id
+         LEFT JOIN clients c ON t.client_id = c.id
+         ORDER BY t.due_date ASC NULLS LAST
+         LIMIT 50`,
+        []
+      ),
+      db.query(
+        `SELECT r.id, r.title, r.message, r.is_read, r.created_at,
+                t.title AS task_title, t.due_date AS task_due_date
+         FROM reminders r
+         LEFT JOIN tasks t ON r.task_id = t.id
+         ORDER BY r.created_at DESC LIMIT 20`,
+        []
+      ),
+      db.query(
+        `SELECT subject, sender_name, sender_email, snippet, date
+         FROM gmail_emails
+         ORDER BY date DESC LIMIT 15`,
+        []
+      ).catch(() => ({ rows: [] })), // Gmail table may not exist — fail gracefully
+    ]);
+
+    const tasks = tasksResult.rows;
+    const reminders = remindersResult.rows;
+    const emails = emailsResult.rows;
+
+    // Pre-classify tasks
+    const urgentTasks  = tasks.filter(t => t.priority === 'urgent' && t.status !== 'completed');
+    const overdueTasks = tasks.filter(t => t.due_date && new Date(t.due_date) < now && t.status !== 'completed');
+    const unreadReminders = reminders.filter(r => !r.is_read);
+
+    const formatDate = (val) => {
+      if (!val) return null;
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return null;
+      return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+    };
+
+    // Build compact payload for AI
+    const payload = {
+      today: todayStr,
+      tasks: tasks.map(t => ({
+        title: t.title,
+        description: t.description || null,
+        priority: t.priority,
+        status: t.status,
+        assigned_to: t.assigned_to || null,
+        client: t.client_name || null,
+        due_date: formatDate(t.due_date),
+        is_overdue: t.due_date ? new Date(t.due_date) < now && t.status !== 'completed' : false,
+      })),
+      reminders: reminders.map(r => ({
+        title: r.title,
+        message: r.message,
+        is_read: r.is_read,
+        related_task: r.task_title || null,
+        task_due_date: formatDate(r.task_due_date),
+      })),
+      emails: emails.map(e => ({
+        subject: e.subject,
+        from: `${e.sender_name} <${e.sender_email}>`,
+        preview: e.snippet,
+        date: formatDate(e.date),
+      })),
+      stats: {
+        total_tasks: tasks.length,
+        urgent_tasks: urgentTasks.length,
+        overdue_tasks: overdueTasks.length,
+        pending_tasks: tasks.filter(t => t.status === 'pending').length,
+        in_progress_tasks: tasks.filter(t => t.status === 'in_progress').length,
+        completed_tasks: tasks.filter(t => t.status === 'completed').length,
+        unread_reminders: unreadReminders.length,
+        total_emails_analyzed: emails.length,
+      },
+    };
+
+    const result = await runOfficeWorkflow(payload);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { askAI, taskSummary, productivitySuggestions, runWorkflow };

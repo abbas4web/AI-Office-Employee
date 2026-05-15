@@ -213,4 +213,74 @@ Return ONLY a valid JSON object (no markdown):
   return JSON.parse(response.choices[0].message.content);
 };
 
-module.exports = { sendPromptWithContext, getTaskSummaryJSON, getProductivitySuggestions, getEmailAnalysis, generateCompletionEmails };
+/**
+ * Run the full AI Office Employee Workflow.
+ * Processes tasks, reminders, and emails into a single structured JSON report.
+ *
+ * @param {object} payload - { today, tasks, reminders, emails, stats }
+ * @returns {object} Structured office workflow report
+ */
+const runOfficeWorkflow = async (payload) => {
+  const prompt = `You are an elite AI Office Employee. You have been given real-time data from an office management portal.
+Your job is to analyze all the data and produce a comprehensive daily operational report.
+
+OFFICE DATA:
+${JSON.stringify(payload, null, 2)}
+
+Return ONLY a valid JSON object (no markdown, no explanation, just JSON) with EXACTLY this structure:
+{
+  "date": "<today's date in DD-MM-YYYY format>",
+  "daily_summary": "<2-3 sentence professional overview of today's office workload and situation>",
+  "urgent_work": [
+    {
+      "title": "<task or reminder title>",
+      "type": "<task|reminder|email>",
+      "assigned_to": "<person name or null>",
+      "reason": "<1 sentence why this is urgent>",
+      "due_date": "<date in DD-MM-YYYY or null>"
+    }
+  ],
+  "priority_suggestions": [
+    {
+      "rank": 1,
+      "task": "<what should be done>",
+      "reason": "<1 sentence why>",
+      "estimated_effort": "<low|medium|high>"
+    }
+  ],
+  "risks": [
+    {
+      "title": "<risk name>",
+      "description": "<1 sentence describing the risk>",
+      "severity": "<high|medium|low>",
+      "source": "<task|reminder|email>"
+    }
+  ],
+  "professional_summary": "<3-4 sentence executive-level summary a manager would read. Include key metrics, concerns, and positive notes.>",
+  "stats": {
+    "total_tasks": <number>,
+    "urgent_tasks": <number>,
+    "overdue_tasks": <number>,
+    "pending_tasks": <number>,
+    "in_progress_tasks": <number>,
+    "completed_tasks": <number>,
+    "unread_reminders": <number>,
+    "total_emails_analyzed": <number>
+  },
+  "productivity_score": <number between 0 and 100>,
+  "action_items": [
+    "<short actionable item the team should do today>"
+  ]
+}`;
+
+  const response = await groq.chat.completions.create({
+    model: 'llama-3.3-70b-versatile',
+    response_format: { type: 'json_object' },
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.3,
+  });
+
+  return JSON.parse(response.choices[0].message.content);
+};
+
+module.exports = { sendPromptWithContext, getTaskSummaryJSON, getProductivitySuggestions, getEmailAnalysis, generateCompletionEmails, runOfficeWorkflow };

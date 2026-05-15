@@ -4,7 +4,7 @@ import { API_URL, authHeader } from "../api";
 import {
   RefreshCw, Bot, TrendingUp, AlertOctagon, AlertTriangle,
   Clock, CheckCircle2, ArrowRight, Lightbulb, Target,
-  Zap, List, RotateCcw
+  Zap, List, RotateCcw, Briefcase, ShieldAlert, Star, Mail
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -17,6 +17,9 @@ export default function Dashboard() {
   const [productivity, setProductivity] = useState(null);
   const [productivityLoading, setProductivityLoading] = useState(false);
   const [productivityError, setProductivityError] = useState('');
+  const [workflow, setWorkflow] = useState(null);
+  const [workflowLoading, setWorkflowLoading] = useState(false);
+  const [workflowError, setWorkflowError] = useState('');
 
   const fetchStats = async () => {
     setLoading(true); setError('');
@@ -64,6 +67,19 @@ export default function Dashboard() {
       else setProductivityError('Failed to generate suggestions.');
     } catch { setProductivityError('Cannot reach AI service.'); }
     finally { setProductivityLoading(false); }
+  };
+
+  const fetchWorkflow = async () => {
+    setWorkflowLoading(true); setWorkflowError(''); setWorkflow(null);
+    try {
+      const res = await fetch(`${API_URL}/api/ai/workflow`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeader() },
+      });
+      const data = await res.json();
+      if (data.success) setWorkflow(data.data);
+      else setWorkflowError('Failed to generate briefing.');
+    } catch { setWorkflowError('Cannot reach AI service.'); }
+    finally { setWorkflowLoading(false); }
   };
 
   useEffect(() => { fetchStats(); }, []);
@@ -179,6 +195,117 @@ export default function Dashboard() {
               <div className="ai-summary-block">
                 <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><Zap size={15}/>Quick Wins</h4>
                 <ul>{productivity.quick_wins.map((qw,i)=><li key={i}>{qw}</li>)}</ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* AI Daily Briefing - Workflow */}
+      <div className="ai-summary-section">
+        <div className="ai-summary-header">
+          <h2 style={{display:'flex',alignItems:'center',gap:'0.5rem'}}><Briefcase size={20}/>AI Daily Briefing</h2>
+          <button className="btn btn-primary" onClick={fetchWorkflow} disabled={workflowLoading}>
+            {workflowLoading ? <><RotateCcw size={14} style={{marginRight:'0.3rem'}}/>Generating...</> : workflow ? 'Regenerate' : 'Generate Briefing'}
+          </button>
+        </div>
+        {workflowError && <div className="error-banner">{workflowError}</div>}
+        {workflowLoading && (
+          <div className="loading-state" style={{padding:'2.5rem'}}>
+            <div className="spinner"></div>
+            <p>AI is analyzing your tasks, reminders, and emails...</p>
+          </div>
+        )}
+        {workflow && !workflowLoading && (
+          <div className="ai-summary-card">
+            {/* Date + Summary */}
+            <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginBottom:'0.5rem'}}>
+              <span style={{fontSize:'0.75rem',fontWeight:600,color:'#6366f1',background:'#eef2ff',padding:'2px 10px',borderRadius:'99px'}}>{workflow.date}</span>
+              {workflow.productivity_score !== undefined && (
+                <span style={{fontSize:'0.75rem',fontWeight:600,color: workflow.productivity_score>=70?'#16a34a':workflow.productivity_score>=40?'#d97706':'#dc2626', background: workflow.productivity_score>=70?'#f0fdf4':workflow.productivity_score>=40?'#fffbeb':'#fef2f2', padding:'2px 10px', borderRadius:'99px'}}>
+                  Score: {workflow.productivity_score}/100
+                </span>
+              )}
+            </div>
+            <p className="ai-summary-text">{workflow.daily_summary}</p>
+
+            {/* Stats Row */}
+            <div className="ai-summary-stats">
+              <span className="ai-stat urgent"><AlertOctagon size={13}/> {workflow.stats?.urgent_tasks||0} Urgent</span>
+              <span className="ai-stat overdue"><AlertTriangle size={13}/> {workflow.stats?.overdue_tasks||0} Overdue</span>
+              <span className="ai-stat pending"><Clock size={13}/> {workflow.stats?.pending_tasks||0} Pending</span>
+              <span className="ai-stat progress"><RefreshCw size={13}/> {workflow.stats?.in_progress_tasks||0} In Progress</span>
+              <span className="ai-stat done"><CheckCircle2 size={13}/> {workflow.stats?.completed_tasks||0} Done</span>
+              {workflow.stats?.unread_reminders > 0 && <span className="ai-stat overdue"><Clock size={13}/> {workflow.stats.unread_reminders} Unread Reminders</span>}
+              {workflow.stats?.total_emails_analyzed > 0 && <span className="ai-stat pending"><Mail size={13}/> {workflow.stats.total_emails_analyzed} Emails Analyzed</span>}
+            </div>
+
+            {/* Productivity Score Bar */}
+            {workflow.productivity_score !== undefined && (
+              <div className="productivity-score-row">
+                <span className="score-label">Productivity Score</span>
+                <div className="score-bar-wrap"><div className="score-bar" style={{width:`${workflow.productivity_score}%`,background:workflow.productivity_score>=70?'#4caf50':workflow.productivity_score>=40?'#ff9800':'#e74c3c'}}/></div>
+                <span className="score-value">{workflow.productivity_score}/100</span>
+              </div>
+            )}
+
+            {/* Urgent Work */}
+            {workflow.urgent_work?.length > 0 && (
+              <div className="ai-summary-block">
+                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><AlertOctagon size={15}/>Urgent Work</h4>
+                <ul>{workflow.urgent_work.map((w,i) => (
+                  <li key={i}>
+                    <span className="ai-type-chip">{w.type}</span>
+                    <strong>{w.title}</strong>
+                    {w.assigned_to && <span> — {w.assigned_to}</span>}
+                    {w.due_date && <span className="due-chip">Due: {w.due_date}</span>}
+                    {w.reason && <p className="task-reason">{w.reason}</p>}
+                  </li>
+                ))}</ul>
+              </div>
+            )}
+
+            {/* Risks */}
+            {workflow.risks?.length > 0 && (
+              <div className="ai-summary-block">
+                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><ShieldAlert size={15}/>Identified Risks</h4>
+                <ul>{workflow.risks.map((r,i) => (
+                  <li key={i}>
+                    <span className={`risk-badge ${r.severity}`}>{r.severity}</span>
+                    <strong>{r.title}</strong> — {r.description}
+                    <span style={{fontSize:'0.72rem',color:'#94a3b8',marginLeft:'6px'}}>({r.source})</span>
+                  </li>
+                ))}</ul>
+              </div>
+            )}
+
+            {/* Priority Suggestions */}
+            {workflow.priority_suggestions?.length > 0 && (
+              <div className="ai-summary-block">
+                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><Target size={15}/>Priority Suggestions</h4>
+                <ol>{workflow.priority_suggestions.map((p,i) => (
+                  <li key={i}>
+                    <strong>{p.task}</strong>
+                    <span className={`effort-chip ${p.estimated_effort}`}>{p.estimated_effort} effort</span>
+                    {p.reason && <p className="task-reason">{p.reason}</p>}
+                  </li>
+                ))}</ol>
+              </div>
+            )}
+
+            {/* Action Items */}
+            {workflow.action_items?.length > 0 && (
+              <div className="ai-summary-block">
+                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><Zap size={15}/>Today's Action Items</h4>
+                <ul>{workflow.action_items.map((a,i) => <li key={i}>{a}</li>)}</ul>
+              </div>
+            )}
+
+            {/* Executive Summary */}
+            {workflow.professional_summary && (
+              <div className="ai-recommendation">
+                <Star size={16}/>
+                <p>{workflow.professional_summary}</p>
               </div>
             )}
           </div>
