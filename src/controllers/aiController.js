@@ -171,8 +171,16 @@ const askAI = async (req, res, next) => {
       }
     }
 
-    // Normal text response fallback
-    res.json({ success: true, reply: aiMessage.content });
+    // Normal text response — if content is null (model called an unhandled tool),
+    // fall back to a direct plain-text call without tools
+    const replyText = aiMessage.content;
+    if (!replyText) {
+      const { sendPlainPromptWithContext } = require('../services/groqService');
+      const plainReply = await sendPlainPromptWithContext(context, prompt.trim());
+      return res.json({ success: true, reply: plainReply });
+    }
+
+    res.json({ success: true, reply: replyText });
   } catch (err) {
     next(err);
   }

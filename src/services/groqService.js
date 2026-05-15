@@ -39,7 +39,7 @@ ${context}
 
 Use this data to answer the user's questions accurately. Be concise and professional.
 If asked to summarize tasks, refer to the actual tasks listed above.
-If the user asks you to send an email or remind someone, use the send_email_reminder tool and look up their email from the data above.
+ONLY use the send_email_reminder tool when the user EXPLICITLY asks you to send an email or remind someone. Never use it for general questions.
 If no data is relevant, answer generally but mention what data you have access to.`,
       },
       { role: 'user', content: prompt },
@@ -283,4 +283,27 @@ Return ONLY a valid JSON object (no markdown, no explanation, just JSON) with EX
   return JSON.parse(response.choices[0].message.content);
 };
 
-module.exports = { sendPromptWithContext, getTaskSummaryJSON, getProductivitySuggestions, getEmailAnalysis, generateCompletionEmails, runOfficeWorkflow };
+/**
+ * Plain text fallback — no tools, always returns a string.
+ * Used when the tool-aware call returns null content.
+ */
+const sendPlainPromptWithContext = async (context, prompt) => {
+  const response = await groq.chat.completions.create({
+    model: 'llama-3.1-8b-instant',
+    messages: [
+      {
+        role: 'system',
+        content: `You are a helpful AI assistant for an office management system.
+You have access to the following real-time data:
+
+${context}
+
+Answer the user's question clearly and concisely using the data above.`,
+      },
+      { role: 'user', content: prompt },
+    ],
+  });
+  return response.choices[0].message.content;
+};
+
+module.exports = { sendPromptWithContext, sendPlainPromptWithContext, getTaskSummaryJSON, getProductivitySuggestions, getEmailAnalysis, generateCompletionEmails, runOfficeWorkflow };
