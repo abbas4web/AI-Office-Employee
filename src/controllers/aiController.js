@@ -164,30 +164,35 @@ const askAI = async (req, res, next) => {
 
     // Check if the AI decided to call a tool
     if (aiMessage.tool_calls && aiMessage.tool_calls.length > 0) {
-      const toolCall = aiMessage.tool_calls[0];
-      
-      if (toolCall.function.name === 'send_email_reminder') {
-        const args = JSON.parse(toolCall.function.arguments);
-        
-        try {
-          await sendReminderEmail(args.to_email, {
+      let replyMessage = '';
+      const emailPromises = [];
+
+      for (const toolCall of aiMessage.tool_calls) {
+        if (toolCall.function.name === 'send_email_reminder') {
+          const args = JSON.parse(toolCall.function.arguments);
+          
+          const emailPromise = sendReminderEmail(args.to_email, {
             reminderTitle: 'Task Reminder from AI Assistant',
             message: args.message,
             taskTitle: args.task_title,
             dueDate: args.due_date || 'N/A'
+          })
+          .then(() => {
+            replyMessage += `✅ Sent reminder to **${args.to_email}** regarding "**${args.task_title}**".\n\n`;
+          })
+          .catch((error) => {
+            console.error("Failed to send AI email:", error);
+            replyMessage += `⚠️ Failed to send to **${args.to_email}** (Server Error).\n\n`;
           });
-          
-          return res.json({ 
-            success: true, 
-            reply: `✅ I have successfully sent an email reminder to **${args.to_email}** regarding the task **"${args.task_title}"**.` 
-          });
-        } catch (error) {
-          console.error("Failed to send AI email:", error);
-          return res.json({ 
-            success: true, 
-            reply: `⚠️ I tried to send an email to **${args.to_email}**, but there was a server error connecting to the email service.` 
-          });
+
+          emailPromises.push(emailPromise);
         }
+      }
+
+      // Wait for all queued emails to finish
+      if (emailPromises.length > 0) {
+        await Promise.all(emailPromises);
+        return res.json({ success: true, reply: replyMessage.trim() });
       }
     }
 
