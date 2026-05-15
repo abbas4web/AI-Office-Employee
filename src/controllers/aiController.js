@@ -19,7 +19,7 @@ const askAI = async (req, res, next) => {
     }
 
     // --- Fetch all portal data in parallel ---
-    const [tasksResult, clientsResult, usersResult, remindersResult, activityResult] = await Promise.all([
+    const [tasksResult, clientsResult, usersResult, remindersResult, activityResult, statsResult] = await Promise.all([
       // Tasks with assignee and client names
       db.query(
         `SELECT t.title, t.description, t.priority, t.status, t.due_date,
@@ -28,7 +28,7 @@ const askAI = async (req, res, next) => {
          LEFT JOIN users u ON t.assigned_to = u.id
          LEFT JOIN clients c ON t.client_id = c.id
          ORDER BY t.due_date ASC NULLS LAST
-         LIMIT 30`,
+         LIMIT 50`,
         []
       ),
       // All clients
@@ -57,10 +57,30 @@ const askAI = async (req, res, next) => {
          ORDER BY al.created_at DESC LIMIT 10`,
         []
       ),
+      // Overall task stats
+      db.query(
+        `SELECT 
+           COUNT(*) as total_tasks,
+           SUM(CASE WHEN priority = 'urgent' THEN 1 ELSE 0 END) as urgent_tasks,
+           SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_tasks,
+           SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tasks,
+           SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_tasks
+         FROM tasks`,
+        []
+      )
     ]);
 
     // --- Build full context string ---
     let context = '=== PORTAL DATA ===\n\n';
+
+    // Overall Stats
+    const stats = statsResult.rows[0];
+    context += `OVERALL SYSTEM STATS:\n`;
+    context += `  Total Tasks: ${stats.total_tasks}\n`;
+    context += `  Urgent Tasks: ${stats.urgent_tasks || 0}\n`;
+    context += `  Pending Tasks: ${stats.pending_tasks || 0}\n`;
+    context += `  In Progress Tasks: ${stats.in_progress_tasks || 0}\n`;
+    context += `  Completed Tasks: ${stats.completed_tasks || 0}\n\n`;
 
     // Current logged-in user
     context += `CURRENTLY LOGGED IN USER:\n`;

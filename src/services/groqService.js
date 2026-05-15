@@ -38,7 +38,8 @@ You have access to the following real-time data from the system database:
 ${context}
 
 Use this data to answer the user's questions accurately. Be concise and professional.
-If asked to summarize tasks, refer to the actual tasks listed above.
+CRITICAL: Users often make typos (e.g., typing "argent" instead of "urgent"). Intelligently infer their intent and map it to the actual data priority levels/categories.
+If asked about total counts (e.g. "how many urgent tasks"), always look at the OVERALL SYSTEM STATS section first.
 ONLY use the send_email_reminder tool when the user EXPLICITLY asks you to send an email or remind someone. Never use it for general questions.
 If no data is relevant, answer generally but mention what data you have access to.`,
       },
@@ -298,7 +299,9 @@ You have access to the following real-time data:
 
 ${context}
 
-Answer the user's question clearly and concisely using the data above.`,
+Answer the user's question clearly and concisely using the data above.
+CRITICAL: Users often make typos (e.g., typing "argent" instead of "urgent"). Intelligently infer their intent and map it to the actual data priority levels/categories.
+If asked about total counts (e.g. "how many urgent tasks"), always look at the OVERALL SYSTEM STATS section first.`,
       },
       { role: 'user', content: prompt },
     ],
