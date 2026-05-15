@@ -28,7 +28,7 @@ const sendPromptWithContext = async (context, prompt) => {
   ];
 
   const response = await groq.chat.completions.create({
-    model: 'llama-3.1-8b-instant',
+    model: 'llama-3.3-70b-versatile',
     messages: [
       {
         role: 'system',
@@ -290,7 +290,7 @@ Return ONLY a valid JSON object (no markdown, no explanation, just JSON) with EX
  */
 const sendPlainPromptWithContext = async (context, prompt) => {
   const response = await groq.chat.completions.create({
-    model: 'llama-3.1-8b-instant',
+    model: 'llama-3.3-70b-versatile',
     messages: [
       {
         role: 'system',
