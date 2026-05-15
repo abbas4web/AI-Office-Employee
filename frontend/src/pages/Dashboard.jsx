@@ -2,24 +2,21 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { API_URL, authHeader } from "../api";
 import {
-  RefreshCw, Bot, TrendingUp, AlertOctagon, AlertTriangle,
-  Clock, CheckCircle2, ArrowRight, Lightbulb, Target,
-  Zap, List, RotateCcw, Briefcase, ShieldAlert, Star, Mail
+  RefreshCw, TrendingUp, AlertOctagon, AlertTriangle,
+  Clock, CheckCircle2, Users, ListTodo, Briefcase,
+  ShieldAlert, Target, Zap, Star, Mail, ChevronRight,
+  RotateCcw, Sparkles, Activity
 } from "lucide-react";
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({ tasks: 0, clients: 0, pending: 0, completed: 0, urgent: 0 });
+  const [stats, setStats] = useState({ tasks: 0, clients: 0, pending: 0, completed: 0, urgent: 0, inProgress: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [summary, setSummary] = useState(null);
-  const [summaryLoading, setSummaryLoading] = useState(false);
-  const [summaryError, setSummaryError] = useState('');
-  const [productivity, setProductivity] = useState(null);
-  const [productivityLoading, setProductivityLoading] = useState(false);
-  const [productivityError, setProductivityError] = useState('');
   const [workflow, setWorkflow] = useState(null);
   const [workflowLoading, setWorkflowLoading] = useState(false);
   const [workflowError, setWorkflowError] = useState('');
+  const today = new Date();
+  const todayStr = today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   const fetchStats = async () => {
     setLoading(true); setError('');
@@ -33,40 +30,16 @@ export default function Dashboard() {
       if (tasksData.success && clientsData.success) {
         const tasks = tasksData.data;
         setStats({
-          tasks: tasks.length, clients: clientsData.data.length,
+          tasks: tasks.length,
+          clients: clientsData.data.length,
           pending: tasks.filter(t => t.status === "pending").length,
           completed: tasks.filter(t => t.status === "completed").length,
           urgent: tasks.filter(t => t.priority === "urgent").length,
+          inProgress: tasks.filter(t => t.status === "in_progress").length,
         });
       } else { setError('Failed to load dashboard data.'); }
     } catch { setError('Cannot reach server.'); }
     finally { setLoading(false); }
-  };
-
-  const fetchAISummary = async () => {
-    setSummaryLoading(true); setSummaryError(''); setSummary(null);
-    try {
-      const res = await fetch(`${API_URL}/api/ai/task-summary`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeader() },
-      });
-      const data = await res.json();
-      if (data.success) setSummary(data.data);
-      else setSummaryError('Failed to generate summary.');
-    } catch { setSummaryError('Cannot reach AI service.'); }
-    finally { setSummaryLoading(false); }
-  };
-
-  const fetchProductivity = async () => {
-    setProductivityLoading(true); setProductivityError(''); setProductivity(null);
-    try {
-      const res = await fetch(`${API_URL}/api/ai/productivity`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeader() },
-      });
-      const data = await res.json();
-      if (data.success) setProductivity(data.data);
-      else setProductivityError('Failed to generate suggestions.');
-    } catch { setProductivityError('Cannot reach AI service.'); }
-    finally { setProductivityLoading(false); }
   };
 
   const fetchWorkflow = async () => {
@@ -84,244 +57,269 @@ export default function Dashboard() {
 
   useEffect(() => { fetchStats(); }, []);
 
+  const scoreColor = (s) => s >= 70 ? '#16a34a' : s >= 40 ? '#d97706' : '#dc2626';
+  const scoreBg   = (s) => s >= 70 ? '#f0fdf4' : s >= 40 ? '#fffbeb' : '#fef2f2';
+  const scoreBar  = (s) => s >= 70 ? '#22c55e' : s >= 40 ? '#f59e0b' : '#ef4444';
+
   return (
-    <div className="dashboard">
-      <div className="page-header">
-        <h1>Dashboard</h1>
-        <button className="btn btn-secondary" onClick={fetchStats} disabled={loading}>
-          <RefreshCw size={15} style={{ marginRight: '0.4rem' }} />
-          {loading ? 'Refreshing...' : 'Refresh'}
-        </button>
+    <div className="db-root">
+
+      {/* ── Top Header ─────────────────────────────── */}
+      <div className="db-header">
+        <div className="db-header-left">
+          <p className="db-date">{todayStr}</p>
+          <h1 className="db-title">Good Morning, Welcome Back 👋</h1>
+          <p className="db-sub">Here's what's happening in your office today.</p>
+        </div>
+        <div className="db-header-right">
+          <button className="db-btn-outline" onClick={fetchStats} disabled={loading}>
+            <RefreshCw size={14} />
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
+          <button className="db-btn-primary" onClick={fetchWorkflow} disabled={workflowLoading}>
+            <Sparkles size={14} />
+            {workflowLoading ? 'Generating...' : workflow ? 'Regenerate Briefing' : 'AI Daily Briefing'}
+          </button>
+        </div>
       </div>
 
       {error && <div className="error-banner">{error}</div>}
 
-      {loading ? (
-        <div className="loading-state"><div className="spinner"></div><p>Loading dashboard...</p></div>
-      ) : (
-        <div className="stats-grid">
-          <div className="stat-card"><h3>Total Tasks</h3><p className="stat-number">{stats.tasks}</p></div>
-          <div className="stat-card urgent-card"><h3>Urgent Tasks</h3><p className="stat-number">{stats.urgent}</p></div>
-          <div className="stat-card"><h3>Pending Tasks</h3><p className="stat-number">{stats.pending}</p></div>
-          <div className="stat-card completed-card"><h3>Completed</h3><p className="stat-number">{stats.completed}</p></div>
-          <div className="stat-card"><h3>Total Clients</h3><p className="stat-number">{stats.clients}</p></div>
+      {/* ── KPI Cards ──────────────────────────────── */}
+      <div className="db-kpi-grid">
+        <div className="db-kpi-card">
+          <div className="db-kpi-icon" style={{background:'#eff6ff',color:'#2563eb'}}><ListTodo size={20}/></div>
+          <div className="db-kpi-body">
+            <span className="db-kpi-label">Total Tasks</span>
+            <span className="db-kpi-value">{loading ? '—' : stats.tasks}</span>
+          </div>
+          <Link to="/tasks" className="db-kpi-link"><ChevronRight size={16}/></Link>
+        </div>
+        <div className="db-kpi-card">
+          <div className="db-kpi-icon" style={{background:'#fef2f2',color:'#dc2626'}}><AlertOctagon size={20}/></div>
+          <div className="db-kpi-body">
+            <span className="db-kpi-label">Urgent Tasks</span>
+            <span className="db-kpi-value" style={{color:'#dc2626'}}>{loading ? '—' : stats.urgent}</span>
+          </div>
+          <Link to="/tasks" className="db-kpi-link"><ChevronRight size={16}/></Link>
+        </div>
+        <div className="db-kpi-card">
+          <div className="db-kpi-icon" style={{background:'#fffbeb',color:'#d97706'}}><Clock size={20}/></div>
+          <div className="db-kpi-body">
+            <span className="db-kpi-label">Pending</span>
+            <span className="db-kpi-value" style={{color:'#d97706'}}>{loading ? '—' : stats.pending}</span>
+          </div>
+          <Link to="/tasks" className="db-kpi-link"><ChevronRight size={16}/></Link>
+        </div>
+        <div className="db-kpi-card">
+          <div className="db-kpi-icon" style={{background:'#f5f3ff',color:'#7c3aed'}}><Activity size={20}/></div>
+          <div className="db-kpi-body">
+            <span className="db-kpi-label">In Progress</span>
+            <span className="db-kpi-value" style={{color:'#7c3aed'}}>{loading ? '—' : stats.inProgress}</span>
+          </div>
+          <Link to="/tasks" className="db-kpi-link"><ChevronRight size={16}/></Link>
+        </div>
+        <div className="db-kpi-card">
+          <div className="db-kpi-icon" style={{background:'#f0fdf4',color:'#16a34a'}}><CheckCircle2 size={20}/></div>
+          <div className="db-kpi-body">
+            <span className="db-kpi-label">Completed</span>
+            <span className="db-kpi-value" style={{color:'#16a34a'}}>{loading ? '—' : stats.completed}</span>
+          </div>
+          <Link to="/tasks" className="db-kpi-link"><ChevronRight size={16}/></Link>
+        </div>
+        <div className="db-kpi-card">
+          <div className="db-kpi-icon" style={{background:'#f0f9ff',color:'#0284c7'}}><Users size={20}/></div>
+          <div className="db-kpi-body">
+            <span className="db-kpi-label">Total Clients</span>
+            <span className="db-kpi-value">{loading ? '—' : stats.clients}</span>
+          </div>
+          <Link to="/clients" className="db-kpi-link"><ChevronRight size={16}/></Link>
+        </div>
+      </div>
+
+      {/* ── AI Briefing Loading ─────────────────────── */}
+      {workflowLoading && (
+        <div className="db-briefing-loading">
+          <div className="db-briefing-loading-inner">
+            <div className="db-pulse-ring"></div>
+            <Sparkles size={28} color="#6366f1" />
+            <p>AI is analyzing your tasks, reminders &amp; emails...</p>
+            <span>This may take a few seconds</span>
+          </div>
         </div>
       )}
 
-      {/* AI Daily Summary */}
-      <div className="ai-summary-section">
-        <div className="ai-summary-header">
-          <h2 style={{display:'flex',alignItems:'center',gap:'0.5rem'}}><Bot size={20} />AI Daily Summary</h2>
-          <button className="btn btn-primary" onClick={fetchAISummary} disabled={summaryLoading}>
-            {summaryLoading ? <><RotateCcw size={14} style={{marginRight:'0.3rem'}} />Analyzing...</> : summary ? 'Regenerate' : 'Generate Summary'}
-          </button>
-        </div>
-        {summaryError && <div className="error-banner">{summaryError}</div>}
-        {summaryLoading && <div className="loading-state" style={{padding:'2rem'}}><div className="spinner"></div><p>AI is analyzing your tasks...</p></div>}
-        {summary && !summaryLoading && (
-          <div className="ai-summary-card">
-            <p className="ai-summary-text">{summary.daily_summary}</p>
-            <div className="ai-summary-stats">
-              <span className="ai-stat urgent"><AlertOctagon size={13} /> {summary.stats?.urgent||0} Urgent</span>
-              <span className="ai-stat overdue"><AlertTriangle size={13} /> {summary.stats?.overdue||0} Overdue</span>
-              <span className="ai-stat pending"><Clock size={13} /> {summary.stats?.pending||0} Pending</span>
-              <span className="ai-stat progress"><RefreshCw size={13} /> {summary.stats?.in_progress||0} In Progress</span>
-              <span className="ai-stat done"><CheckCircle2 size={13} /> {summary.stats?.completed||0} Done</span>
+      {workflowError && <div className="error-banner">{workflowError}</div>}
+
+      {/* ── AI Briefing Panel ───────────────────────── */}
+      {workflow && !workflowLoading && (
+        <div className="db-briefing">
+
+          {/* Header */}
+          <div className="db-briefing-header">
+            <div className="db-briefing-title-row">
+              <div className="db-briefing-icon"><Sparkles size={18}/></div>
+              <div>
+                <h2 className="db-briefing-title">AI Daily Briefing</h2>
+                <span className="db-briefing-date">{workflow.date}</span>
+              </div>
             </div>
-            {summary.urgent_tasks?.length > 0 && (
-              <div className="ai-summary-block">
-                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><AlertOctagon size={15}/>Urgent Tasks</h4>
-                <ul>{summary.urgent_tasks.map((t,i)=><li key={i}><strong>{t.title}</strong>{t.assigned_to&&<span> — {t.assigned_to}</span>}{t.due_date&&<span className="due-chip">Due: {t.due_date}</span>}{t.reason&&<p className="task-reason">{t.reason}</p>}</li>)}</ul>
-              </div>
-            )}
-            {summary.overdue_tasks?.length > 0 && (
-              <div className="ai-summary-block">
-                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><AlertTriangle size={15}/>Overdue Tasks</h4>
-                <ul>{summary.overdue_tasks.map((t,i)=><li key={i}><strong>{t.title}</strong>{t.assigned_to&&<span> — {t.assigned_to}</span>}{t.days_overdue>0&&<span className="overdue-chip">{t.days_overdue} day{t.days_overdue!==1?'s':''} overdue</span>}</li>)}</ul>
-              </div>
-            )}
-            {summary.priority_order?.length > 0 && (
-              <div className="ai-summary-block">
-                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><List size={15}/>Suggested Priority Order</h4>
-                <ol>{summary.priority_order.map((title,i)=><li key={i}>{title}</li>)}</ol>
-              </div>
-            )}
-            {summary.recommendation && (
-              <div className="ai-recommendation"><Lightbulb size={16}/><p>{summary.recommendation}</p></div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* AI Productivity Suggestions */}
-      <div className="ai-summary-section">
-        <div className="ai-summary-header">
-          <h2 style={{display:'flex',alignItems:'center',gap:'0.5rem'}}><TrendingUp size={20}/>Productivity Suggestions</h2>
-          <button className="btn btn-primary" onClick={fetchProductivity} disabled={productivityLoading}>
-            {productivityLoading ? <><RotateCcw size={14} style={{marginRight:'0.3rem'}}/>Analyzing...</> : productivity ? 'Refresh' : 'Analyze Workload'}
-          </button>
-        </div>
-        {productivityError && <div className="error-banner">{productivityError}</div>}
-        {productivityLoading && <div className="loading-state" style={{padding:'2rem'}}><div className="spinner"></div><p>AI is analyzing your workload...</p></div>}
-        {productivity && !productivityLoading && (
-          <div className="ai-summary-card">
-            {productivity.productivity_score!==undefined && (
-              <div className="productivity-score-row">
-                <span className="score-label">Productivity Score</span>
-                <div className="score-bar-wrap"><div className="score-bar" style={{width:`${productivity.productivity_score}%`,background:productivity.productivity_score>=70?'#4caf50':productivity.productivity_score>=40?'#ff9800':'#e74c3c'}}/></div>
-                <span className="score-value">{productivity.productivity_score}/100</span>
-              </div>
-            )}
-            <p className="ai-summary-text">{productivity.summary}</p>
-            {productivity.top_priority && (
-              <div className="ai-summary-block">
-                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><Target size={15}/>Top Priority Right Now</h4>
-                <div className="priority-box"><strong>{productivity.top_priority.task}</strong><p>{productivity.top_priority.reason}</p></div>
-              </div>
-            )}
-            {productivity.risks?.length > 0 && (
-              <div className="ai-summary-block">
-                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><AlertTriangle size={15}/>Identified Risks</h4>
-                <ul>{productivity.risks.map((r,i)=><li key={i}><span className={`risk-badge ${r.severity}`}>{r.severity}</span> <strong>{r.title}</strong> — {r.description}</li>)}</ul>
-              </div>
-            )}
-            {productivity.workload_issues?.length > 0 && (
-              <div className="ai-summary-block">
-                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><RefreshCw size={15}/>Workload Issues</h4>
-                <ul>{productivity.workload_issues.map((w,i)=><li key={i}><strong>{w.issue}</strong> — {w.detail}</li>)}</ul>
-              </div>
-            )}
-            {productivity.quick_wins?.length > 0 && (
-              <div className="ai-summary-block">
-                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><Zap size={15}/>Quick Wins</h4>
-                <ul>{productivity.quick_wins.map((qw,i)=><li key={i}>{qw}</li>)}</ul>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* AI Daily Briefing - Workflow */}
-      <div className="ai-summary-section">
-        <div className="ai-summary-header">
-          <h2 style={{display:'flex',alignItems:'center',gap:'0.5rem'}}><Briefcase size={20}/>AI Daily Briefing</h2>
-          <button className="btn btn-primary" onClick={fetchWorkflow} disabled={workflowLoading}>
-            {workflowLoading ? <><RotateCcw size={14} style={{marginRight:'0.3rem'}}/>Generating...</> : workflow ? 'Regenerate' : 'Generate Briefing'}
-          </button>
-        </div>
-        {workflowError && <div className="error-banner">{workflowError}</div>}
-        {workflowLoading && (
-          <div className="loading-state" style={{padding:'2.5rem'}}>
-            <div className="spinner"></div>
-            <p>AI is analyzing your tasks, reminders, and emails...</p>
-          </div>
-        )}
-        {workflow && !workflowLoading && (
-          <div className="ai-summary-card">
-            {/* Date + Summary */}
-            <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginBottom:'0.5rem'}}>
-              <span style={{fontSize:'0.75rem',fontWeight:600,color:'#6366f1',background:'#eef2ff',padding:'2px 10px',borderRadius:'99px'}}>{workflow.date}</span>
-              {workflow.productivity_score !== undefined && (
-                <span style={{fontSize:'0.75rem',fontWeight:600,color: workflow.productivity_score>=70?'#16a34a':workflow.productivity_score>=40?'#d97706':'#dc2626', background: workflow.productivity_score>=70?'#f0fdf4':workflow.productivity_score>=40?'#fffbeb':'#fef2f2', padding:'2px 10px', borderRadius:'99px'}}>
-                  Score: {workflow.productivity_score}/100
-                </span>
-              )}
-            </div>
-            <p className="ai-summary-text">{workflow.daily_summary}</p>
-
-            {/* Stats Row */}
-            <div className="ai-summary-stats">
-              <span className="ai-stat urgent"><AlertOctagon size={13}/> {workflow.stats?.urgent_tasks||0} Urgent</span>
-              <span className="ai-stat overdue"><AlertTriangle size={13}/> {workflow.stats?.overdue_tasks||0} Overdue</span>
-              <span className="ai-stat pending"><Clock size={13}/> {workflow.stats?.pending_tasks||0} Pending</span>
-              <span className="ai-stat progress"><RefreshCw size={13}/> {workflow.stats?.in_progress_tasks||0} In Progress</span>
-              <span className="ai-stat done"><CheckCircle2 size={13}/> {workflow.stats?.completed_tasks||0} Done</span>
-              {workflow.stats?.unread_reminders > 0 && <span className="ai-stat overdue"><Clock size={13}/> {workflow.stats.unread_reminders} Unread Reminders</span>}
-              {workflow.stats?.total_emails_analyzed > 0 && <span className="ai-stat pending"><Mail size={13}/> {workflow.stats.total_emails_analyzed} Emails Analyzed</span>}
-            </div>
-
-            {/* Productivity Score Bar */}
             {workflow.productivity_score !== undefined && (
-              <div className="productivity-score-row">
-                <span className="score-label">Productivity Score</span>
-                <div className="score-bar-wrap"><div className="score-bar" style={{width:`${workflow.productivity_score}%`,background:workflow.productivity_score>=70?'#4caf50':workflow.productivity_score>=40?'#ff9800':'#e74c3c'}}/></div>
-                <span className="score-value">{workflow.productivity_score}/100</span>
+              <div className="db-score-pill" style={{background: scoreBg(workflow.productivity_score), color: scoreColor(workflow.productivity_score)}}>
+                <TrendingUp size={13}/>
+                Score: {workflow.productivity_score}/100
               </div>
             )}
+          </div>
+
+          {/* Summary text */}
+          <p className="db-briefing-summary">{workflow.daily_summary}</p>
+
+          {/* Productivity bar */}
+          {workflow.productivity_score !== undefined && (
+            <div className="db-score-bar-row">
+              <span className="db-score-bar-label">Productivity</span>
+              <div className="db-score-bar-track">
+                <div className="db-score-bar-fill" style={{width:`${workflow.productivity_score}%`, background: scoreBar(workflow.productivity_score)}}></div>
+              </div>
+              <span className="db-score-bar-value">{workflow.productivity_score}%</span>
+            </div>
+          )}
+
+          {/* Stats chips */}
+          <div className="db-chip-row">
+            <span className="db-chip red"><AlertOctagon size={12}/>{workflow.stats?.urgent_tasks||0} Urgent</span>
+            <span className="db-chip amber"><AlertTriangle size={12}/>{workflow.stats?.overdue_tasks||0} Overdue</span>
+            <span className="db-chip blue"><Clock size={12}/>{workflow.stats?.pending_tasks||0} Pending</span>
+            <span className="db-chip purple"><RefreshCw size={12}/>{workflow.stats?.in_progress_tasks||0} In Progress</span>
+            <span className="db-chip green"><CheckCircle2 size={12}/>{workflow.stats?.completed_tasks||0} Done</span>
+            {workflow.stats?.unread_reminders > 0 && <span className="db-chip amber"><Clock size={12}/>{workflow.stats.unread_reminders} Reminders</span>}
+            {workflow.stats?.total_emails_analyzed > 0 && <span className="db-chip blue"><Mail size={12}/>{workflow.stats.total_emails_analyzed} Emails</span>}
+          </div>
+
+          {/* 3-column grid */}
+          <div className="db-briefing-grid">
 
             {/* Urgent Work */}
             {workflow.urgent_work?.length > 0 && (
-              <div className="ai-summary-block">
-                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><AlertOctagon size={15}/>Urgent Work</h4>
-                <ul>{workflow.urgent_work.map((w,i) => (
-                  <li key={i}>
-                    <span className="ai-type-chip">{w.type}</span>
-                    <strong>{w.title}</strong>
-                    {w.assigned_to && <span> — {w.assigned_to}</span>}
-                    {w.due_date && <span className="due-chip">Due: {w.due_date}</span>}
-                    {w.reason && <p className="task-reason">{w.reason}</p>}
-                  </li>
-                ))}</ul>
+              <div className="db-briefing-col">
+                <div className="db-col-header red">
+                  <AlertOctagon size={15}/>
+                  <span>Urgent Work</span>
+                </div>
+                <div className="db-col-list">
+                  {workflow.urgent_work.map((w, i) => (
+                    <div key={i} className="db-col-item">
+                      <div className="db-col-item-top">
+                        <span className="db-type-badge">{w.type}</span>
+                        <strong>{w.title}</strong>
+                      </div>
+                      {w.assigned_to && <span className="db-col-meta">{w.assigned_to}</span>}
+                      {w.due_date && <span className="db-col-due">Due {w.due_date}</span>}
+                      {w.reason && <p className="db-col-reason">{w.reason}</p>}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Risks */}
             {workflow.risks?.length > 0 && (
-              <div className="ai-summary-block">
-                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><ShieldAlert size={15}/>Identified Risks</h4>
-                <ul>{workflow.risks.map((r,i) => (
-                  <li key={i}>
-                    <span className={`risk-badge ${r.severity}`}>{r.severity}</span>
-                    <strong>{r.title}</strong> — {r.description}
-                    <span style={{fontSize:'0.72rem',color:'#94a3b8',marginLeft:'6px'}}>({r.source})</span>
-                  </li>
-                ))}</ul>
+              <div className="db-briefing-col">
+                <div className="db-col-header amber">
+                  <ShieldAlert size={15}/>
+                  <span>Identified Risks</span>
+                </div>
+                <div className="db-col-list">
+                  {workflow.risks.map((r, i) => (
+                    <div key={i} className="db-col-item">
+                      <div className="db-col-item-top">
+                        <span className={`db-severity-badge ${r.severity}`}>{r.severity}</span>
+                        <strong>{r.title}</strong>
+                      </div>
+                      <p className="db-col-reason">{r.description}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Priority Suggestions */}
             {workflow.priority_suggestions?.length > 0 && (
-              <div className="ai-summary-block">
-                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><Target size={15}/>Priority Suggestions</h4>
-                <ol>{workflow.priority_suggestions.map((p,i) => (
-                  <li key={i}>
-                    <strong>{p.task}</strong>
-                    <span className={`effort-chip ${p.estimated_effort}`}>{p.estimated_effort} effort</span>
-                    {p.reason && <p className="task-reason">{p.reason}</p>}
-                  </li>
-                ))}</ol>
+              <div className="db-briefing-col">
+                <div className="db-col-header purple">
+                  <Target size={15}/>
+                  <span>Priority Suggestions</span>
+                </div>
+                <div className="db-col-list">
+                  {workflow.priority_suggestions.map((p, i) => (
+                    <div key={i} className="db-col-item">
+                      <div className="db-col-item-top">
+                        <span className="db-rank-badge">#{p.rank}</span>
+                        <strong>{p.task}</strong>
+                        <span className={`db-effort-badge ${p.estimated_effort}`}>{p.estimated_effort}</span>
+                      </div>
+                      {p.reason && <p className="db-col-reason">{p.reason}</p>}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+          </div>
 
-            {/* Action Items */}
+          {/* Action Items + Executive Summary side by side */}
+          <div className="db-briefing-bottom">
             {workflow.action_items?.length > 0 && (
-              <div className="ai-summary-block">
-                <h4 style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><Zap size={15}/>Today's Action Items</h4>
-                <ul>{workflow.action_items.map((a,i) => <li key={i}>{a}</li>)}</ul>
+              <div className="db-action-items">
+                <div className="db-col-header green">
+                  <Zap size={15}/>
+                  <span>Today's Action Items</span>
+                </div>
+                <ul className="db-action-list">
+                  {workflow.action_items.map((a, i) => (
+                    <li key={i}><span className="db-action-dot"></span>{a}</li>
+                  ))}
+                </ul>
               </div>
             )}
-
-            {/* Executive Summary */}
             {workflow.professional_summary && (
-              <div className="ai-recommendation">
-                <Star size={16}/>
+              <div className="db-exec-summary">
+                <div className="db-col-header indigo">
+                  <Star size={15}/>
+                  <span>Executive Summary</span>
+                </div>
                 <p>{workflow.professional_summary}</p>
               </div>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Quick Links */}
-      <div className="recent-activity">
-        <h2>Quick Links</h2>
-        <div className="quick-links">
-          <Link to="/tasks" className="quick-link"><ArrowRight size={14}/>View All Tasks</Link>
-          <Link to="/clients" className="quick-link"><ArrowRight size={14}/>View All Clients</Link>
-          <Link to="/reminders" className="quick-link"><ArrowRight size={14}/>View Reminders</Link>
-          <Link to="/activity" className="quick-link"><ArrowRight size={14}/>Activity Log</Link>
+        </div>
+      )}
+
+      {/* ── Quick Nav ──────────────────────────────── */}
+      <div className="db-quicknav">
+        <h2 className="db-section-title">Quick Navigation</h2>
+        <div className="db-quicknav-grid">
+          {[
+            { to:'/tasks',     icon:<ListTodo size={22}/>,   label:'Tasks',      sub:'Manage all tasks',      color:'#2563eb', bg:'#eff6ff' },
+            { to:'/clients',   icon:<Users size={22}/>,      label:'Clients',    sub:'View contacts',         color:'#0284c7', bg:'#f0f9ff' },
+            { to:'/reminders', icon:<Clock size={22}/>,      label:'Reminders',  sub:'Upcoming reminders',    color:'#d97706', bg:'#fffbeb' },
+            { to:'/activity',  icon:<Activity size={22}/>,   label:'Activity',   sub:'Recent system events',  color:'#7c3aed', bg:'#f5f3ff' },
+            { to:'/team',      icon:<Briefcase size={22}/>,  label:'Team',       sub:'Manage team members',   color:'#16a34a', bg:'#f0fdf4' },
+            { to:'/gmail',     icon:<Mail size={22}/>,       label:'Gmail',      sub:'Read & sync emails',    color:'#dc2626', bg:'#fef2f2' },
+          ].map(({ to, icon, label, sub, color, bg }) => (
+            <Link key={to} to={to} className="db-nav-card">
+              <div className="db-nav-icon" style={{background: bg, color}}>{icon}</div>
+              <div className="db-nav-body">
+                <span className="db-nav-label">{label}</span>
+                <span className="db-nav-sub">{sub}</span>
+              </div>
+              <ChevronRight size={16} className="db-nav-arrow"/>
+            </Link>
+          ))}
         </div>
       </div>
+
     </div>
   );
 }
