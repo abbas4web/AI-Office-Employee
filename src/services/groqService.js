@@ -18,6 +18,7 @@ const sendPromptWithContext = async (context, prompt) => {
           properties: {
             to_email: { type: 'string', description: 'The email address of the recipient (e.g., john@company.com)' },
             task_title: { type: 'string', description: 'The title of the task to remind them about' },
+            task_description: { type: 'string', description: 'The detailed description of the task, if available' },
             message: { type: 'string', description: 'A short, professional reminder message' },
             due_date: { type: 'string', description: 'The due date of the task, if available (e.g., 2026-05-15)' }
           },

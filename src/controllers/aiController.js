@@ -102,6 +102,7 @@ const askAI = async (req, res, next) => {
           const formatted = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
           context += ` | Due: ${formatted}`;
         }
+        if (t.description)  context += ` | Description: ${t.description}`;
         context += '\n';
       });
     } else {
@@ -175,6 +176,7 @@ const askAI = async (req, res, next) => {
             reminderTitle: 'Task Reminder from AI Assistant',
             message: args.message,
             taskTitle: args.task_title,
+            taskDescription: args.task_description || '',
             dueDate: args.due_date || 'N/A'
           })
           .then(() => {

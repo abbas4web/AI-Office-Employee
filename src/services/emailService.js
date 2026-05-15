@@ -69,7 +69,7 @@ const formatDateDDMMYYYY = (val) => {
   return `${day}-${month}-${year}`;
 };
 
-const reminderTemplate = ({ reminderTitle, message, taskTitle, dueDate }) => ({
+const reminderTemplate = ({ reminderTitle, message, taskTitle, taskDescription, dueDate }) => ({
   subject: `🔔 Reminder: ${reminderTitle}`,
   html: `
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 24px; border-radius: 12px;">
@@ -85,6 +85,7 @@ const reminderTemplate = ({ reminderTitle, message, taskTitle, dueDate }) => ({
         ${taskTitle ? `
         <div style="padding: 14px 18px; background: #fefce8; border-left: 4px solid #f59e0b; border-radius: 6px; margin-bottom: 16px;">
           <p style="margin: 0; color: #92400e; font-size: 14px;"><strong>Related Task:</strong> ${taskTitle}</p>
+          ${taskDescription ? `<p style="margin: 6px 0 0; color: #92400e; font-size: 13px;"><strong>Description:</strong> ${taskDescription}</p>` : ''}
           ${dueDate && dueDate !== 'N/A' ? `<p style="margin: 6px 0 0; color: #92400e; font-size: 13px;"><strong>Due:</strong> ${formatDateDDMMYYYY(dueDate)}</p>` : ''}
         </div>` : ''}
 
