@@ -4,16 +4,11 @@ const db = require('../db');
 
 /**
  * POST /api/auth/login
+ * Body is pre-validated by Joi middleware.
  */
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      const err = new Error('Email and password are required');
-      err.statusCode = 400;
-      return next(err);
-    }
 
     const result = await db.query(
       'SELECT id, name, email, role, password_hash FROM users WHERE email = $1',
@@ -22,6 +17,7 @@ const login = async (req, res, next) => {
 
     const user = result.rows[0];
 
+    // Use a generic message to avoid user enumeration
     if (!user || !user.password_hash) {
       const err = new Error('Invalid email or password');
       err.statusCode = 401;
@@ -53,24 +49,11 @@ const login = async (req, res, next) => {
 
 /**
  * POST /api/auth/register
- * Creates a new user with a hashed password.
- * Public endpoint — anyone can register (or restrict to admins via protect middleware if needed).
+ * Body is pre-validated by Joi middleware (password complexity enforced there).
  */
 const register = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
-
-    if (!name || !email || !password) {
-      const err = new Error('Name, email, and password are required');
-      err.statusCode = 400;
-      return next(err);
-    }
-
-    if (password.length < 6) {
-      const err = new Error('Password must be at least 6 characters');
-      err.statusCode = 400;
-      return next(err);
-    }
 
     // Check if email already exists
     const existing = await db.query('SELECT id FROM users WHERE email = $1', [email]);
@@ -80,20 +63,17 @@ const register = async (req, res, next) => {
       return next(err);
     }
 
-    // Hash the password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Insert user
     const result = await db.query(
       `INSERT INTO users (name, email, password_hash, role)
        VALUES ($1, $2, $3, $4)
        RETURNING id, name, email, role`,
-      [name, email.toLowerCase().trim(), passwordHash, role || 'employee']
+      [name, email, passwordHash, role || 'employee']
     );
 
     const newUser = result.rows[0];
 
-    // Auto-login: return token immediately after registration
     const token = jwt.sign(
       { id: newUser.id, email: newUser.email, role: newUser.role, name: newUser.name },
       process.env.JWT_SECRET,

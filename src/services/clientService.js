@@ -1,22 +1,39 @@
 const db = require('../db');
 
 /**
- * Fetch all clients with optional filters.
+ * Fetch clients with optional filters and pagination.
+ * Returns { clients, total }.
  */
-const getAllClients = async (filters = {}) => {
-  let sql = 'SELECT * FROM clients WHERE 1=1';
+const getAllClients = async (filters = {}, pagination = {}) => {
+  const { limit = 50, offset = 0 } = pagination;
+
+  const conditions = ['1=1'];
   const params = [];
   let paramIndex = 1;
 
   if (filters.company) {
-    sql += ` AND company ILIKE $${paramIndex++}`;
+    conditions.push(`company ILIKE $${paramIndex++}`);
     params.push(`%${filters.company}%`);
   }
 
-  sql += ' ORDER BY created_at DESC';
+  const where = conditions.join(' AND ');
 
-  const result = await db.query(sql, params);
-  return result.rows;
+  const countResult = await db.query(
+    `SELECT COUNT(*) AS total FROM clients WHERE ${where}`,
+    params
+  );
+  const total = parseInt(countResult.rows[0].total, 10);
+
+  const dataParams = [...params, limit, offset];
+  const dataResult = await db.query(
+    `SELECT * FROM clients
+     WHERE ${where}
+     ORDER BY created_at DESC
+     LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
+    dataParams
+  );
+
+  return { clients: dataResult.rows, total };
 };
 
 /**
@@ -35,38 +52,25 @@ const createClient = async ({ name, email, phone, company, notes }) => {
     `INSERT INTO clients (name, email, phone, company, notes)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-    [name, email, phone, company, notes]
+    [name, email || null, phone || null, company || null, notes || null]
   );
   return result.rows[0];
 };
 
 /**
- * Update an existing client.
+ * Update an existing client (only provided fields are updated).
  */
 const updateClient = async (id, updates) => {
   const fields = [];
   const values = [];
   let paramIndex = 1;
 
-  if (updates.name !== undefined) {
-    fields.push(`name = $${paramIndex++}`);
-    values.push(updates.name);
-  }
-  if (updates.email !== undefined) {
-    fields.push(`email = $${paramIndex++}`);
-    values.push(updates.email);
-  }
-  if (updates.phone !== undefined) {
-    fields.push(`phone = $${paramIndex++}`);
-    values.push(updates.phone);
-  }
-  if (updates.company !== undefined) {
-    fields.push(`company = $${paramIndex++}`);
-    values.push(updates.company);
-  }
-  if (updates.notes !== undefined) {
-    fields.push(`notes = $${paramIndex++}`);
-    values.push(updates.notes);
+  const allowed = ['name', 'email', 'phone', 'company', 'notes'];
+  for (const key of allowed) {
+    if (updates[key] !== undefined) {
+      fields.push(`${key} = $${paramIndex++}`);
+      values.push(updates[key]);
+    }
   }
 
   if (fields.length === 0) {
@@ -82,7 +86,7 @@ const updateClient = async (id, updates) => {
 };
 
 /**
- * Delete a client.
+ * Delete a client by ID.
  */
 const deleteClient = async (id) => {
   await db.query('DELETE FROM clients WHERE id = $1', [id]);

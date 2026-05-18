@@ -3,13 +3,24 @@ const { logActivity } = require('../services/activityService');
 
 /**
  * GET /clients
- * Returns all clients with optional filtering.
+ * Returns clients with optional filtering and pagination.
+ * Query params: company, page (default 1), limit (default 50)
  */
 const getClients = async (req, res, next) => {
   try {
     const { company } = req.query;
-    const clients = await clientService.getAllClients({ company });
-    res.json({ success: true, data: clients });
+
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const offset = (page - 1) * limit;
+
+    const { clients, total } = await clientService.getAllClients({ company }, { limit, offset });
+
+    res.json({
+      success: true,
+      data: clients,
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    });
   } catch (err) {
     next(err);
   }
@@ -17,7 +28,6 @@ const getClients = async (req, res, next) => {
 
 /**
  * GET /clients/:id
- * Returns a single client by ID.
  */
 const getClient = async (req, res, next) => {
   try {
@@ -37,23 +47,13 @@ const getClient = async (req, res, next) => {
 
 /**
  * POST /clients
- * Creates a new client.
+ * Body is pre-validated by Joi middleware.
  */
 const createClient = async (req, res, next) => {
   try {
     const { name, email, phone, company, notes } = req.body;
 
-    if (!name) {
-      const error = new Error('Name is required');
-      error.statusCode = 400;
-      return next(error);
-    }
-
-    const client = await clientService.createClient({
-      name, email, phone, company, notes
-    });
-
-    // Log activity
+    const client = await clientService.createClient({ name, email, phone, company, notes });
     await logActivity(req.user?.id, 'CREATE', 'client', client.id, { name: client.name });
 
     res.status(201).json({ success: true, data: client });
@@ -64,12 +64,10 @@ const createClient = async (req, res, next) => {
 
 /**
  * PATCH /clients/:id
- * Updates an existing client.
+ * Body is pre-validated by Joi middleware.
  */
 const updateClient = async (req, res, next) => {
   try {
-    const { name, email, phone, company, notes } = req.body;
-
     const existingClient = await clientService.getClientById(req.params.id);
     if (!existingClient) {
       const error = new Error('Client not found');
@@ -77,11 +75,8 @@ const updateClient = async (req, res, next) => {
       return next(error);
     }
 
-    const client = await clientService.updateClient(req.params.id, {
-      name, email, phone, company, notes
-    });
-
-    // Log activity
+    const { name, email, phone, company, notes } = req.body;
+    const client = await clientService.updateClient(req.params.id, { name, email, phone, company, notes });
     await logActivity(req.user?.id, 'UPDATE', 'client', client.id, { name: client.name });
 
     res.json({ success: true, data: client });
@@ -92,7 +87,6 @@ const updateClient = async (req, res, next) => {
 
 /**
  * DELETE /clients/:id
- * Deletes a client.
  */
 const deleteClient = async (req, res, next) => {
   try {
@@ -104,8 +98,6 @@ const deleteClient = async (req, res, next) => {
     }
 
     await clientService.deleteClient(req.params.id);
-
-    // Log activity
     await logActivity(req.user?.id, 'DELETE', 'client', req.params.id, { name: existingClient.name });
 
     res.json({ success: true, message: 'Client deleted successfully' });

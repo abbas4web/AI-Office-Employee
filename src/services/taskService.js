@@ -1,55 +1,75 @@
 const db = require('../db');
 
 /**
- * Fetch all tasks with optional filters.
+ * Fetch tasks with optional filters and pagination.
+ * Returns { tasks, total } so the controller can build pagination metadata.
  */
-const getAllTasks = async (filters = {}) => {
-  let sql = `
-    SELECT t.*, 
-           u.name as assigned_user_name,
-           c.name as client_name
-    FROM tasks t
-    LEFT JOIN users u ON t.assigned_to = u.id
-    LEFT JOIN clients c ON t.client_id = c.id
-    WHERE 1=1
-  `;
+const getAllTasks = async (filters = {}, pagination = {}) => {
+  const { limit = 50, offset = 0 } = pagination;
+
+  // Build WHERE clause
+  const conditions = ['1=1'];
   const params = [];
   let paramIndex = 1;
 
   if (filters.status) {
-    sql += ` AND t.status = $${paramIndex++}`;
+    conditions.push(`t.status = $${paramIndex++}`);
     params.push(filters.status);
   }
-
   if (filters.priority) {
-    sql += ` AND t.priority = $${paramIndex++}`;
+    conditions.push(`t.priority = $${paramIndex++}`);
     params.push(filters.priority);
   }
-
   if (filters.assigned_to) {
-    sql += ` AND t.assigned_to = $${paramIndex++}`;
+    conditions.push(`t.assigned_to = $${paramIndex++}`);
     params.push(filters.assigned_to);
   }
 
-  sql += ' ORDER BY t.created_at DESC';
+  const where = conditions.join(' AND ');
 
-  const result = await db.query(sql, params);
-  return result.rows;
+  // Count query (same filters, no pagination)
+  const countResult = await db.query(
+    `SELECT COUNT(*) AS total
+     FROM tasks t
+     LEFT JOIN users u ON t.assigned_to = u.id
+     LEFT JOIN clients c ON t.client_id = c.id
+     WHERE ${where}`,
+    params
+  );
+  const total = parseInt(countResult.rows[0].total, 10);
+
+  // Data query with pagination
+  const dataParams = [...params, limit, offset];
+  const dataResult = await db.query(
+    `SELECT t.*,
+            u.name AS assigned_user_name,
+            c.name AS client_name
+     FROM tasks t
+     LEFT JOIN users u ON t.assigned_to = u.id
+     LEFT JOIN clients c ON t.client_id = c.id
+     WHERE ${where}
+     ORDER BY t.created_at DESC
+     LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
+    dataParams
+  );
+
+  return { tasks: dataResult.rows, total };
 };
 
 /**
  * Fetch a single task by ID.
  */
 const getTaskById = async (id) => {
-  const result = await db.query(`
-    SELECT t.*, 
-           u.name as assigned_user_name,
-           c.name as client_name
-    FROM tasks t
-    LEFT JOIN users u ON t.assigned_to = u.id
-    LEFT JOIN clients c ON t.client_id = c.id
-    WHERE t.id = $1
-  `, [id]);
+  const result = await db.query(
+    `SELECT t.*,
+            u.name AS assigned_user_name,
+            c.name AS client_name
+     FROM tasks t
+     LEFT JOIN users u ON t.assigned_to = u.id
+     LEFT JOIN clients c ON t.client_id = c.id
+     WHERE t.id = $1`,
+    [id]
+  );
   return result.rows[0] || null;
 };
 
@@ -61,46 +81,26 @@ const createTask = async ({ title, description, priority, status, due_date, assi
     `INSERT INTO tasks (title, description, priority, status, due_date, assigned_to, client_id)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING *`,
-    [title, description, priority, status, due_date, assigned_to, client_id]
+    [title, description || null, priority, status, due_date || null, assigned_to || null, client_id || null]
   );
   return result.rows[0];
 };
 
 /**
- * Update an existing task.
+ * Update an existing task (only provided fields are updated).
  */
 const updateTask = async (id, updates) => {
   const fields = [];
   const values = [];
   let paramIndex = 1;
 
-  if (updates.title !== undefined) {
-    fields.push(`title = $${paramIndex++}`);
-    values.push(updates.title);
-  }
-  if (updates.description !== undefined) {
-    fields.push(`description = $${paramIndex++}`);
-    values.push(updates.description);
-  }
-  if (updates.priority !== undefined) {
-    fields.push(`priority = $${paramIndex++}`);
-    values.push(updates.priority);
-  }
-  if (updates.status !== undefined) {
-    fields.push(`status = $${paramIndex++}`);
-    values.push(updates.status);
-  }
-  if (updates.due_date !== undefined) {
-    fields.push(`due_date = $${paramIndex++}`);
-    values.push(updates.due_date);
-  }
-  if (updates.assigned_to !== undefined) {
-    fields.push(`assigned_to = $${paramIndex++}`);
-    values.push(updates.assigned_to);
-  }
-  if (updates.client_id !== undefined) {
-    fields.push(`client_id = $${paramIndex++}`);
-    values.push(updates.client_id);
+  const allowed = ['title', 'description', 'priority', 'status', 'due_date', 'assigned_to', 'client_id'];
+
+  for (const key of allowed) {
+    if (updates[key] !== undefined) {
+      fields.push(`${key} = $${paramIndex++}`);
+      values.push(updates[key]);
+    }
   }
 
   if (fields.length === 0) {
@@ -116,7 +116,7 @@ const updateTask = async (id, updates) => {
 };
 
 /**
- * Delete a task.
+ * Delete a task by ID.
  */
 const deleteTask = async (id) => {
   await db.query('DELETE FROM tasks WHERE id = $1', [id]);

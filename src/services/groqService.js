@@ -3,6 +3,19 @@ const Groq = require('groq-sdk');
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 /**
+ * Safely parse JSON from Groq response.
+ * Returns null instead of throwing if the response is malformed.
+ */
+function safeParseJSON(raw, fallback = null) {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    console.error('[Groq] Failed to parse JSON response:', raw?.slice(0, 200));
+    return fallback;
+  }
+}
+
+/**
  * Send a prompt WITH pre-fetched data context to Groq.
  * Used by the general AI chat assistant.
  */
@@ -102,8 +115,21 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
 
   const raw = response.choices[0].message.content;
 
-  // Parse JSON — groq with json_object mode guarantees valid JSON
-  return JSON.parse(raw);
+  const parsed = safeParseJSON(raw);
+  if (!parsed) {
+    // Fallback: return a minimal valid structure so the UI doesn't break
+    return {
+      date: new Date().toISOString().split('T')[0],
+      daily_summary: 'Unable to generate summary at this time. Please try again.',
+      urgent_tasks: [],
+      overdue_tasks: [],
+      in_progress_tasks: [],
+      stats: taskPayload.stats || {},
+      recommendation: 'Please check your tasks manually.',
+      priority_order: [],
+    };
+  }
+  return parsed;
 };
 
 /**
@@ -145,7 +171,14 @@ Return ONLY a valid JSON object (no markdown, no explanation):
     temperature: 0.4,
   });
 
-  return JSON.parse(response.choices[0].message.content);
+  return safeParseJSON(response.choices[0].message.content, {
+    top_priority: { task: 'Unable to determine', reason: 'AI service unavailable' },
+    risks: [],
+    workload_issues: [],
+    quick_wins: [],
+    productivity_score: 0,
+    summary: 'Productivity analysis unavailable. Please try again later.',
+  });
 };
 
 /**
@@ -180,7 +213,14 @@ Return ONLY a valid JSON object (no markdown):
     temperature: 0.2,
   });
 
-  return JSON.parse(response.choices[0].message.content);
+  return safeParseJSON(response.choices[0].message.content, {
+    task_title: 'Follow up on email',
+    priority: 'medium',
+    is_urgent: false,
+    category: 'general',
+    summary: 'Email analysis unavailable.',
+    suggested_due_days: null,
+  });
 };
 
 /**
@@ -212,7 +252,10 @@ Return ONLY a valid JSON object (no markdown):
     temperature: 0.4,
   });
 
-  return JSON.parse(response.choices[0].message.content);
+  return safeParseJSON(response.choices[0].message.content, {
+    client_email_body: `Dear ${taskData.clientName || 'Client'}, we are pleased to inform you that the task "${taskData.title}" has been completed successfully. Please don't hesitate to reach out if you need anything further.`,
+    employee_email_body: `Hi ${taskData.employeeName || 'Team'}, great work completing "${taskData.title}"! Your effort is appreciated. Please await your next assignment.`,
+  });
 };
 
 /**
@@ -282,7 +325,17 @@ Return ONLY a valid JSON object (no markdown, no explanation, just JSON) with EX
     temperature: 0.3,
   });
 
-  return JSON.parse(response.choices[0].message.content);
+  return safeParseJSON(response.choices[0].message.content, {
+    date: payload.today,
+    daily_summary: 'Daily briefing unavailable. Please try again later.',
+    urgent_work: [],
+    priority_suggestions: [],
+    risks: [],
+    professional_summary: 'AI workflow service is temporarily unavailable.',
+    stats: payload.stats || {},
+    productivity_score: 0,
+    action_items: [],
+  });
 };
 
 /**
