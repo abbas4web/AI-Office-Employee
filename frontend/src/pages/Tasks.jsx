@@ -102,8 +102,8 @@ export default function Tasks() {
 
     const dataToSend = {
       ...formData,
-      assigned_to: formData.assigned_to ? Number(formData.assigned_to) : null,
-      client_id: formData.client_id ? Number(formData.client_id) : null,
+      assigned_to: formData.assigned_to || null,
+      client_id: formData.client_id || null,
       due_date: formData.due_date || null,
     };
 
@@ -135,8 +135,8 @@ export default function Tasks() {
       priority: task.priority || "medium",
       status: task.status || "pending",
       due_date: task.due_date ? task.due_date.split("T")[0] : "",
-      assigned_to: task.assigned_to ? String(task.assigned_to) : "",
-      client_id: task.client_id ? String(task.client_id) : "",
+      assigned_to: task.assigned_to || "",
+      client_id: task.client_id || "",
     });
     setFormError(''); setShowDrawer(true);
   };

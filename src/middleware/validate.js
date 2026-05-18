@@ -59,6 +59,8 @@ const registerSchema = Joi.object({
 
 // ─── Task Schemas ─────────────────────────────────────────────────────────────
 
+const uuidSchema = Joi.string().guid({ version: ['uuidv4', 'uuidv5'] });
+
 const createTaskSchema = Joi.object({
   title: Joi.string().trim().min(1).max(255).required().messages({
     'any.required': 'Title is required',
@@ -68,8 +70,8 @@ const createTaskSchema = Joi.object({
   priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium'),
   status: Joi.string().valid('pending', 'in_progress', 'completed', 'cancelled').default('pending'),
   due_date: Joi.date().iso().allow(null, '').optional(),
-  assigned_to: Joi.number().integer().positive().allow(null).optional(),
-  client_id: Joi.number().integer().positive().allow(null).optional(),
+  assigned_to: uuidSchema.allow(null, '').empty('').optional(),
+  client_id: uuidSchema.allow(null, '').empty('').optional(),
 });
 
 const updateTaskSchema = Joi.object({
@@ -78,8 +80,8 @@ const updateTaskSchema = Joi.object({
   priority: Joi.string().valid('low', 'medium', 'high', 'urgent').optional(),
   status: Joi.string().valid('pending', 'in_progress', 'completed', 'cancelled').optional(),
   due_date: Joi.date().iso().allow(null, '').optional(),
-  assigned_to: Joi.number().integer().positive().allow(null).optional(),
-  client_id: Joi.number().integer().positive().allow(null).optional(),
+  assigned_to: uuidSchema.allow(null, '').empty('').optional(),
+  client_id: uuidSchema.allow(null, '').empty('').optional(),
 });
 
 // ─── Client Schemas ───────────────────────────────────────────────────────────
@@ -120,7 +122,6 @@ const createUserSchema = Joi.object({
     }),
   role: Joi.string().valid('employee', 'manager', 'admin').default('employee'),
 });
-
 const updateUserSchema = Joi.object({
   name: Joi.string().trim().min(2).max(100).optional(),
   email: Joi.string().email().lowercase().trim().optional(),
