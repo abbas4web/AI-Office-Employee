@@ -37,7 +37,6 @@ CREATE TABLE IF NOT EXISTS tasks (
     client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 -- Reminders table: Notifications and alerts for users
 CREATE TABLE IF NOT EXISTS reminders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
