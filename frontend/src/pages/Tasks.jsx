@@ -116,11 +116,12 @@ export default function Tasks() {
       const data = await res.json();
       if (res.ok) {
         fetchTasks();
-        closeModal();
+        closeDrawer();
       } else {
         setFormError(data.message || 'Failed to save task.');
       }
-    } catch {
+    } catch (err) {
+      console.error('Task save error:', err);
       setFormError('Cannot reach server. Please try again.');
     } finally {
       setSaving(false);
