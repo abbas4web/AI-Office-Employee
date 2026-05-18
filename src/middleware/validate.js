@@ -67,9 +67,9 @@ const createTaskSchema = Joi.object({
   description: Joi.string().trim().max(2000).allow('', null).optional(),
   priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium'),
   status: Joi.string().valid('pending', 'in_progress', 'completed', 'cancelled').default('pending'),
-  due_date: Joi.date().iso().allow(null).optional(),
-  assigned_to: Joi.number().integer().positive().allow(null).optional(),
-  client_id: Joi.number().integer().positive().allow(null).optional(),
+  due_date: Joi.date().iso().allow(null, '').optional(),
+  assigned_to: Joi.number().integer().positive().allow(null, '').empty('').optional(),
+  client_id: Joi.number().integer().positive().allow(null, '').empty('').optional(),
 });
 
 const updateTaskSchema = Joi.object({
@@ -77,9 +77,9 @@ const updateTaskSchema = Joi.object({
   description: Joi.string().trim().max(2000).allow('', null).optional(),
   priority: Joi.string().valid('low', 'medium', 'high', 'urgent').optional(),
   status: Joi.string().valid('pending', 'in_progress', 'completed', 'cancelled').optional(),
-  due_date: Joi.date().iso().allow(null).optional(),
-  assigned_to: Joi.number().integer().positive().allow(null).optional(),
-  client_id: Joi.number().integer().positive().allow(null).optional(),
+  due_date: Joi.date().iso().allow(null, '').optional(),
+  assigned_to: Joi.number().integer().positive().allow(null, '').empty('').optional(),
+  client_id: Joi.number().integer().positive().allow(null, '').empty('').optional(),
 });
 
 // ─── Client Schemas ───────────────────────────────────────────────────────────
